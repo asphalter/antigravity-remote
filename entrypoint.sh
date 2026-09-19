@@ -124,16 +124,27 @@ rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 2>/dev/null || true
 echo "[KasmVNC] Starting VNC/Web server on port 8080 (SecurityTypes: None, DisableBasicAuth)..."
 runuser -u antigravity -- vncserver :1 -geometry 1920x1080 -depth 24 -websocketPort 8080 -SecurityTypes None -DisableBasicAuth
 
+# 9. Start FileBrowser (port 8081, baseurl /filebrowser, root /home/antigravity)
+echo "[FileBrowser] Starting Web File Manager on port 8081 (baseurl: /filebrowser)..."
+runuser -u antigravity -- filebrowser \
+    --address 0.0.0.0 \
+    --port 8081 \
+    --root /home/antigravity \
+    --baseurl /filebrowser \
+    --database /tmp/filebrowser.db \
+    --noauth >/dev/null 2>&1 &
+
 echo "=========================================================="
 echo " Antigravity Remote is ACTIVE and ready!"
-echo " Web UI available at: http://<host>:8080/"
-echo " Resolution: Dynamic (1080p, 4K UHD auto-fit)"
-echo " File Manager: Built into KasmVNC side control panel"
+echo " Web IDE UI:    http://<host>:8080/"
+echo " File Manager:  http://<host>:8081/filebrowser/"
+echo " Resolution:    Dynamic (1080p, 4K UHD auto-fit)"
 echo "=========================================================="
 
 # Graceful shutdown cleanup trap
 cleanup() {
-    echo "[Shutdown] Terminating KasmVNC and active processes..."
+    echo "[Shutdown] Terminating services and active processes..."
+    pkill -u antigravity filebrowser 2>/dev/null || true
     pkill -9 -u antigravity Xvnc 2>/dev/null || pkill -9 -u antigravity Xkasmvnc 2>/dev/null || true
     exit 0
 }

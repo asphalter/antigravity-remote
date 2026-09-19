@@ -68,7 +68,13 @@ RUN curl -fSL -o /tmp/kasmvncserver.deb "https://github.com/kasmtech/KasmVNC/rel
     && rm -rf /var/lib/apt/lists/* \
     && ln -s /usr/share/kasmvnc /usr/local/share/kasmvnc
 
-# 3. Dynamic download and baseline installation of Google Antigravity IDE Desktop
+# 3. Install FileBrowser for Web-Native File Transfer (Upload/Download)
+RUN curl -fsSL -o /tmp/filebrowser.tar.gz "https://github.com/filebrowser/filebrowser/releases/download/v2.63.23/linux-amd64-filebrowser.tar.gz" \
+    && tar -xzf /tmp/filebrowser.tar.gz -C /usr/local/bin filebrowser \
+    && rm -f /tmp/filebrowser.tar.gz \
+    && chmod +x /usr/local/bin/filebrowser
+
+# 4. Dynamic download and baseline installation of Google Antigravity IDE Desktop
 RUN set -ex; \
     echo "Resolving dynamic download URL for Antigravity IDE (Linux x64)..."; \
     URL=$(curl -sL "https://antigravity.google/download/?os=linux" | grep -o 'https://edgedl.me.gvt1.com/edgedl/release2/[^"]*linux-x64/Antigravity%20IDE\.tar\.gz' | head -n 1); \
@@ -89,7 +95,7 @@ RUN set -ex; \
     chmod +x /usr/local/bin/antigravity; \
     ln -sf /usr/local/bin/antigravity /usr/local/bin/antigravity-ide
 
-# 4. Configure non-root 'antigravity' user (UID 1000) and subuid/subgid mapping
+# 5. Configure non-root 'antigravity' user (UID 1000) and subuid/subgid mapping
 RUN useradd -m -u 1000 -s /bin/bash antigravity \
     && echo "antigravity ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/antigravity \
     && chmod 0440 /etc/sudoers.d/antigravity \
@@ -97,14 +103,14 @@ RUN useradd -m -u 1000 -s /bin/bash antigravity \
     && echo "antigravity:100000:65536" > /etc/subuid \
     && echo "antigravity:100000:65536" > /etc/subgid
 
-# 5. Default nested Podman configuration
+# 6. Default nested Podman configuration
 RUN mkdir -p /etc/containers \
     && printf '[containers]\ncgroups = "disabled"\nnetns = "host"\n\n[engine]\ncgroup_manager = "cgroupfs"\n' > /etc/containers/containers.conf
 
-# 6. Prepare configuration staging directory
+# 7. Prepare configuration staging directory
 RUN mkdir -p /etc/antigravity
 
-# 7. Copy configuration files and startup scripts
+# 8. Copy configuration files and startup scripts
 COPY containers-storage.conf /etc/antigravity/containers-storage.conf
 COPY kasmvnc.yaml /etc/antigravity/kasmvnc.yaml
 COPY openbox-rc.xml /etc/antigravity/openbox-rc.xml
@@ -113,8 +119,8 @@ COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 
 RUN chmod +x /usr/local/bin/entrypoint.sh /etc/antigravity/openbox-autostart
 
-# 8. Expose KasmVNC Web UI port (HTML5/WebSocket)
-EXPOSE 8080
+# 9. Expose KasmVNC Web UI (8080) and FileBrowser (8081)
+EXPOSE 8080 8081
 
 # Working directory
 WORKDIR /home/antigravity

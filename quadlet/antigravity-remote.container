@@ -7,9 +7,10 @@ Wants=network-online.target
 Image=localhost/antigravity-remote:latest
 ContainerName=antigravity-remote
 
-# --- Network: Publish port 8080 to host ---
+# --- Network: Publish ports to host (8080: IDE, 8081: FileBrowser) ---
 Network=pasta:-4
 PublishPort=8080:8080
+PublishPort=8081:8081
 
 # --- Podman-in-Podman (rootless container runtime) ---
 AddCapability=SYS_ADMIN

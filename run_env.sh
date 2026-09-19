@@ -26,6 +26,7 @@ IMAGE_NAME="${ANTIGRAVITY_IMAGE:-antigravity-remote}"
 CONTAINER_NAME="${ANTIGRAVITY_CONTAINER:-antigravity-remote}"
 VOLUME_NAME="${ANTIGRAVITY_VOLUME:-antigravity-home}"
 HOST_PORT="${ANTIGRAVITY_PORT:-8080}"
+FILEBROWSER_PORT="${ANTIGRAVITY_FB_PORT:-8081}"
 
 # Output styling colors
 RED='\033[0;31m'
@@ -39,10 +40,11 @@ echo -e "${CYAN}═════════════════════�
 echo -e "${CYAN}  Antigravity Remote — Web-Native Desktop Environment${NC}"
 echo -e "${CYAN}══════════════════════════════════════════════════════════════${NC}"
 echo ""
-echo -e "  Host Port:      ${BOLD}${HOST_PORT}${NC}"
-echo -e "  Image:          ${BOLD}${IMAGE_NAME}${NC}"
-echo -e "  Container:      ${BOLD}${CONTAINER_NAME}${NC}"
-echo -e "  Home Volume:    ${BOLD}${VOLUME_NAME}${NC}"
+echo -e "  IDE Port:          ${BOLD}${HOST_PORT}${NC}"
+echo -e "  FileBrowser Port:  ${BOLD}${FILEBROWSER_PORT}${NC}"
+echo -e "  Image:             ${BOLD}${IMAGE_NAME}${NC}"
+echo -e "  Container:         ${BOLD}${CONTAINER_NAME}${NC}"
+echo -e "  Home Volume:       ${BOLD}${VOLUME_NAME}${NC}"
 echo ""
 
 # --------------------------------------------------------------------------
@@ -94,6 +96,7 @@ podman run -d \
     --memory=16g --cpus=8 \
     -v "${VOLUME_NAME}:/home/antigravity" \
     -p "${HOST_PORT}:8080" \
+    -p "${FILEBROWSER_PORT}:8081" \
     "${IMAGE_NAME}" < /dev/null
 
 echo -e "${GREEN}[OK]${NC} Container started."
@@ -107,11 +110,11 @@ echo -e "${GREEN}  ✓ Antigravity Remote environment is ready!${NC}"
 echo -e "${CYAN}══════════════════════════════════════════════════════════════${NC}"
 echo ""
 echo -e "  ${CYAN}Web Browser Access:${NC}"
-echo -e "    Local URL:        ${BOLD}http://localhost:${HOST_PORT}/${NC}"
-echo -e "    Remote Access:    Expose port ${HOST_PORT} via reverse proxy, VPN, or tunnel"
-echo -e "    Authentication:   Disabled locally (enforce via your own proxy / tunnel)"
+echo -e "    IDE Desktop:      ${BOLD}http://localhost:${HOST_PORT}/${NC}"
+echo -e "    File Manager:     ${BOLD}http://localhost:${FILEBROWSER_PORT}/filebrowser/${NC}"
+echo -e "    Cloudflare Path:  ${BOLD}https://<domain>/filebrowser${NC} -> port ${FILEBROWSER_PORT}"
+echo -e "    Authentication:   Disabled locally (enforce via Cloudflare Access / VPN)"
 echo -e "    Resolution:       Dynamic (auto-adapts from 1080p to 4K UHD)"
-echo -e "    File Transfer:    Slide-out KasmVNC panel (Upload & Download)"
 echo ""
 echo -e "  ${CYAN}Environment Features:${NC}"
 echo -e "    ✓ Base OS: Debian 12 (Bookworm slim, English en_US.UTF-8 locale)"

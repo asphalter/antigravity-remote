@@ -33,6 +33,7 @@ REMOTE_HOST=""
 LOCAL_DEPLOY=false
 SSH_PORT=22
 HOST_PORT=8080
+FB_PORT=8081
 IMAGE_NAME="antigravity-remote:latest"
 SERVICE_NAME="antigravity-remote.service"
 CONTAINER_NAME="antigravity-remote"
@@ -48,13 +49,14 @@ usage() {
     echo -e "  ${BOLD}Usage:${NC}"
     echo -e "    ${CYAN}./deploy.sh user@server${NC}                   Rootless (default)"
     echo -e "    ${CYAN}./deploy.sh user@server --rootful${NC}         Rootful (systemd system)"
-    echo -e "    ${CYAN}./deploy.sh user@server --port 9090${NC}       Custom host port (default: 8080)"
+    echo -e "    ${CYAN}./deploy.sh user@server --port 9090${NC}       Custom IDE port (default: 8080)"
     echo -e "    ${CYAN}./deploy.sh --local${NC}                         Local deploy"
     echo -e "    ${CYAN}./deploy.sh --local --port 9090${NC}             Local deploy with custom port"
     echo ""
     echo -e "  ${BOLD}Options:${NC}"
     echo -e "    --rootful           Install as system-wide service (requires sudo)"
-    echo -e "    --port PORT         Published host port (default: 8080)"
+    echo -e "    --port PORT         Published IDE host port (default: 8080)"
+    echo -e "    --fb-port PORT      Published FileBrowser host port (default: 8081)"
     echo -e "    --ssh-port PORT     Remote SSH port for deployment (default: 22)"
     echo -e "    --local             Deploy to local machine"
     echo -e "    -h, --help          Show this help message"
@@ -70,6 +72,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --port)
             HOST_PORT="$2"
+            shift 2
+            ;;
+        --fb-port)
+            FB_PORT="$2"
             shift 2
             ;;
         --ssh-port)
@@ -259,7 +265,9 @@ else
 fi
 
 TMP_CONTAINER_QUADLET="/tmp/antigravity-remote-$$.container"
-sed "s/PublishPort=8080:8080/PublishPort=${HOST_PORT}:8080/g" "${QUADLET_SRC_DIR}/antigravity-remote.container" > "${TMP_CONTAINER_QUADLET}"
+sed -e "s/PublishPort=8080:8080/PublishPort=${HOST_PORT}:8080/g" \
+    -e "s/PublishPort=8081:8081/PublishPort=${FB_PORT}:8081/g" \
+    "${QUADLET_SRC_DIR}/antigravity-remote.container" > "${TMP_CONTAINER_QUADLET}"
 
 if [ "$MODE" = "rootful" ]; then
     copy_to_target "${TMP_CONTAINER_QUADLET}" "/tmp/antigravity-remote.container"
@@ -273,7 +281,7 @@ else
 fi
 
 rm -f "${TMP_CONTAINER_QUADLET}"
-ok "Quadlet files installed in ${QUADLET_DEST} (host port: ${HOST_PORT})"
+ok "Quadlet files installed in ${QUADLET_DEST} (IDE port: ${HOST_PORT}, FileBrowser port: ${FB_PORT})"
 
 # --------------------------------------------------------------------------
 # 6. Reload systemd and start service
@@ -313,10 +321,11 @@ else
 fi
 
 echo -e "  ${CYAN}Web Browser Access:${NC}"
-echo -e "    URL:          ${BOLD}http://${TARGET_HOST}:${HOST_PORT}/${NC}"
-echo -e "    Auth:         Disabled locally (enforce via your own proxy / tunnel)"
+echo -e "    IDE Desktop:  ${BOLD}http://${TARGET_HOST}:${HOST_PORT}/${NC}"
+echo -e "    File Manager: ${BOLD}http://${TARGET_HOST}:${FB_PORT}/filebrowser/${NC}"
+echo -e "    Cloudflare:   Path /filebrowser* -> port ${FB_PORT}"
+echo -e "    Auth:         Disabled locally (enforce via Cloudflare Access / VPN)"
 echo -e "    Display:      Dynamic resolution (1080p, 4K UHD adaptive)"
-echo -e "    File Manager: Built into KasmVNC side panel (Upload & Download)"
 echo ""
 echo -e "  ${CYAN}Service Management:${NC}"
 if [ "$LOCAL_DEPLOY" = false ]; then
