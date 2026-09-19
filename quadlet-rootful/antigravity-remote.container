@@ -1,0 +1,40 @@
+[Unit]
+Description=Antigravity IDE Remote — Web Desktop (KasmVNC + Openbox) [Rootful]
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=localhost/antigravity-remote:latest
+ContainerName=antigravity-remote
+
+# --- Network: Publish port 8080 to host ---
+Network=pasta:-4
+PublishPort=8080:8080
+
+# --- Podman-in-Podman (container runtime) ---
+AddCapability=SYS_ADMIN
+AddCapability=MKNOD
+AddDevice=/dev/fuse
+SecurityLabelDisable=true
+
+# --- Resource allocation ---
+ShmSize=2g
+PodmanArgs=--memory=16g --cpus=8
+
+# --- Persistent volume for /home/antigravity ---
+Volume=antigravity-home.volume:/home/antigravity
+
+# --- Health check for KasmVNC HTTP server ---
+HealthCmd=curl -fsSo /dev/null http://localhost:8080/ || exit 1
+HealthInterval=30s
+HealthRetries=3
+HealthStartPeriod=20s
+
+[Service]
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=60
+TimeoutStopSec=15
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,13 @@
+# ==============================================================================
+# antigravity-home.volume — Persistent volume definition for /home/antigravity [Rootful]
+#
+# Place alongside antigravity-remote.container in:
+#   /etc/containers/systemd/
+# ==============================================================================
+
+[Unit]
+Description=Antigravity IDE — Persistent Home Volume [Rootful]
+
+[Volume]
+# The Podman volume name matches the file name without extension (antigravity-home)
+# Podman automatically creates this volume if it does not already exist

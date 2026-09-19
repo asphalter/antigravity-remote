@@ -1,0 +1,62 @@
+# KasmVNC Server Configuration for Antigravity Remote
+# Optimized for Web-Only access (HTML5/WebSocket) with dynamic 1080p and 4K UHD support
+
+desktop:
+  resolution:
+    width: 1920
+    height: 1080
+  allow_resize: true
+  pixel_depth: 24
+
+network:
+  protocol: http
+  websocket_port: 8080
+  use_ipv4: true
+  use_ipv6: true
+  ssl:
+    require_ssl: false
+
+user_session:
+  new_session_disconnects_existing_exclusive_session: false
+  concurrent_connections_prompt: false
+  idle_timeout: never
+
+data_loss_prevention:
+  clipboard:
+    delay_between_operations: none
+    server_to_client:
+      enabled: true
+      size: unlimited
+      primary_clipboard_enabled: false
+    client_to_server:
+      enabled: true
+      size: unlimited
+
+encoding:
+  max_frame_rate: 60
+  rect_encoding_mode:
+    min_quality: 7
+    max_quality: 9
+    consider_lossless_quality: 10
+    rectangle_compress_threads: auto
+  video_encoding_mode:
+    jpeg_quality: -1
+    webp_quality: 8
+    max_resolution:
+      width: 3840
+      height: 2160
+    enter_video_encoding_mode:
+      time_threshold: 3
+      area_threshold: 35%
+    exit_video_encoding_mode:
+      time_threshold: 2
+    webp_encoding_time: 20
+
+server:
+  http:
+    httpd_directory: /usr/share/kasmvnc/www
+  advanced:
+    kasm_password_file: ${HOME}/.kasmpasswd
+
+command_line:
+  prompt: false

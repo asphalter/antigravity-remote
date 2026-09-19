@@ -1,0 +1,33 @@
+#!/bin/bash
+# Openbox autostart script for Antigravity Remote
+
+# Disable X11 screensaver and display power management
+xset s off 2>/dev/null || true
+xset -dpms 2>/dev/null || true
+
+# Launch Antigravity IDE in a resilient loop (auto-restart if unexpectedly closed)
+# Caps at 50 retries with progressive backoff to avoid infinite CPU burn
+# if the binary is corrupted or consistently crashes.
+(
+  # Wait for window manager initialization
+  sleep 1
+  RETRIES=0
+  MAX_RETRIES=50
+  while [ $RETRIES -lt $MAX_RETRIES ]; do
+    echo "[Openbox] Starting Antigravity IDE (attempt $((RETRIES + 1))/${MAX_RETRIES})..."
+    START_TIME=$(date +%s)
+    /usr/local/bin/antigravity
+    ELAPSED=$(( $(date +%s) - START_TIME ))
+    # Reset retry counter if the IDE ran for more than 30 seconds (normal exit)
+    if [ $ELAPSED -gt 30 ]; then
+      RETRIES=0
+    else
+      RETRIES=$((RETRIES + 1))
+    fi
+    DELAY=$((2 + RETRIES / 5))
+    echo "[Openbox] Antigravity IDE terminated after ${ELAPSED}s. Restarting in ${DELAY}s..."
+    sleep $DELAY
+  done
+  echo "[Openbox] Max retries (${MAX_RETRIES}) reached. IDE will not be restarted."
+) &
+
