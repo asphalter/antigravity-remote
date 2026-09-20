@@ -124,15 +124,9 @@ rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 2>/dev/null || true
 echo "[KasmVNC] Starting VNC/Web server on port 8080 (SecurityTypes: None, DisableBasicAuth)..."
 runuser -u antigravity -- vncserver :1 -geometry 1920x1080 -depth 24 -websocketPort 8080 -SecurityTypes None -DisableBasicAuth
 
-# 9. Start FileBrowser (port 8081, baseurl /filebrowser, root /home/antigravity)
-echo "[FileBrowser] Starting Web File Manager on port 8081 (baseurl: /filebrowser)..."
-runuser -u antigravity -- filebrowser \
-    --address 0.0.0.0 \
-    --port 8081 \
-    --root /home/antigravity \
-    --baseurl /filebrowser \
-    --database /tmp/filebrowser.db \
-    --noauth >/dev/null 2>&1 &
+# 9. Start FileBrowser Quantum (port 8081, baseurl /filebrowser, root /home/antigravity)
+echo "[FileBrowser] Starting FileBrowser Quantum on port 8081 (config: /etc/antigravity/filebrowser.yaml)..."
+runuser -u antigravity -- filebrowser -c /etc/antigravity/filebrowser.yaml >/dev/null 2>&1 &
 
 echo "=========================================================="
 echo " Antigravity Remote is ACTIVE and ready!"

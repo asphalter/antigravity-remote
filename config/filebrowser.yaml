@@ -1,0 +1,39 @@
+# ==============================================================================
+# FileBrowser Quantum Configuration for Antigravity Remote
+# ==============================================================================
+# Streamlined configuration for FileBrowser Quantum (gtsteffaniak/filebrowser).
+# Configured for web-native file management behind Cloudflare Tunnel.
+# Authentication (passwords, 2FA/TOTP, LDAP, OIDC) is completely disabled (noauth)
+# because access control is enforced at the perimeter (Cloudflare Access / VPN).
+# ==============================================================================
+
+http:
+  port: 8081
+  listen: "0.0.0.0"
+  baseURL: "/filebrowser"
+  trustedHeaders:
+    - X-Forwarded-Proto
+    - X-Forwarded-Host
+    - X-Forwarded-For
+    - X-Real-IP
+  trustProxyHeaders: true
+  disableRateLimit: true
+
+server:
+  port: 8081
+  baseURL: "/filebrowser"
+  cacheDir: "/tmp/filebrowser_cache"
+  database:
+    path: "/tmp/filebrowser.db"
+  sources:
+    - name: "Antigravity Workspace"
+      path: "/home/antigravity"
+      config:
+        defaultEnabled: true
+
+database:
+  path: "/tmp/filebrowser.db"
+
+auth:
+  methods:
+    noauth: true # Disables all login forms, 2FA, LDAP, and password checks

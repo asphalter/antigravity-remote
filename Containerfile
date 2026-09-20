@@ -68,10 +68,8 @@ RUN curl -fSL -o /tmp/kasmvncserver.deb "https://github.com/kasmtech/KasmVNC/rel
     && rm -rf /var/lib/apt/lists/* \
     && ln -s /usr/share/kasmvnc /usr/local/share/kasmvnc
 
-# 3. Install FileBrowser for Web-Native File Transfer (Upload/Download)
-RUN curl -fsSL -o /tmp/filebrowser.tar.gz "https://github.com/filebrowser/filebrowser/releases/download/v2.63.23/linux-amd64-filebrowser.tar.gz" \
-    && tar -xzf /tmp/filebrowser.tar.gz -C /usr/local/bin filebrowser \
-    && rm -f /tmp/filebrowser.tar.gz \
+# 3. Install FileBrowser Quantum for Web-Native File Transfer (Upload/Download)
+RUN curl -fsSL -o /usr/local/bin/filebrowser "https://github.com/gtsteffaniak/filebrowser/releases/download/v1.5.6-stable/linux-amd64-filebrowser" \
     && chmod +x /usr/local/bin/filebrowser
 
 # 4. Dynamic download and baseline installation of Google Antigravity IDE Desktop
@@ -111,10 +109,7 @@ RUN mkdir -p /etc/containers \
 RUN mkdir -p /etc/antigravity
 
 # 8. Copy configuration files and startup scripts
-COPY containers-storage.conf /etc/antigravity/containers-storage.conf
-COPY kasmvnc.yaml /etc/antigravity/kasmvnc.yaml
-COPY openbox-rc.xml /etc/antigravity/openbox-rc.xml
-COPY openbox-autostart /etc/antigravity/openbox-autostart
+COPY config/ /etc/antigravity/
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 
 RUN chmod +x /usr/local/bin/entrypoint.sh /etc/antigravity/openbox-autostart

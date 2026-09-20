@@ -10,10 +10,10 @@ Built on **Debian 12 Bookworm**, the stack integrates:
 - **Google Antigravity IDE Desktop**: Native Electron application with complete IDE capabilities, extensions, and agent support.
 - **Boot-Time Auto-Update**: Checks for new Google releases at startup and updates the core application binaries in-place while keeping user data and conversations 100% intact.
 - **KasmVNC Server (Port 8080)**: Next-generation VNC server with integrated web server, ultra-low-latency WebP compression, differential screen rect-encoding, and bidirectional clipboard.
-- **FileBrowser (Port 8081)**: Ultra-lightweight web file manager (~15 MB) serving `/home/antigravity` with drag-and-drop upload, zip download, and path-based routing under `/filebrowser`.
+- **FileBrowser Quantum (Port 8081)**: Actively maintained web file manager (`gtsteffaniak/filebrowser`) serving `/home/antigravity` with drag-and-drop upload, zip download, zero-login frictionless access (`noauth`), and path-based routing under `/filebrowser`.
 - **Openbox**: Ultra-lightweight window manager (~15 MB RAM) configured for borderless, maximized fullscreen execution.
 - **Podman-in-Podman (Rootless)**: Enables running and building `podman` containers directly inside the IDE terminal.
-- **Clean Ingress Architecture**: Exposes port 8080 (IDE desktop) and port 8081 (FileBrowser), designed for Cloudflare Tunnel path-based routing (`/` and `/filebrowser`).
+- **Clean Ingress Architecture**: Exposes port 8080 (IDE desktop) and port 8081 (FileBrowser Quantum), designed for Cloudflare Tunnel path-based routing (`/` and `/filebrowser`).
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -82,14 +82,15 @@ On container startup, `entrypoint.sh` queries `https://antigravity.google/downlo
 ### Dynamic Resolution (4K UHD & 1080p)
 KasmVNC dynamically adapts the virtual X11 resolution to match your browser viewport dimensions. Whether connecting from a 1080p laptop or a 4K workstation, the desktop scales smoothly with crystal-clear text rendering.
 
-### Web-Native File Manager (FileBrowser)
-FileBrowser runs on port 8081 with root `/home/antigravity` and baseurl `/filebrowser`:
+### Web-Native File Manager (FileBrowser Quantum)
+FileBrowser Quantum (`gtsteffaniak/filebrowser`) runs on port 8081 with root `/home/antigravity` and base URL `/filebrowser`:
 - **Upload**: Drag-and-drop or browse files and folders from your local device directly into `/home/antigravity`.
 - **Download**: Browse container files, download single files or select multiple files/directories to download as a zipped archive (`.zip`).
-- **Path-Based Routing**: Configured with `--baseurl /filebrowser`, allowing Cloudflare Tunnel to expose FileBrowser at `https://<domain>/filebrowser` seamlessly.
+- **Path-Based Routing**: Configured with `baseURL: "/filebrowser"`, allowing Cloudflare Tunnel to expose FileBrowser at `https://<domain>/filebrowser` seamlessly.
+- **Frictionless Auth (`noauth`)**: Internal authentication, 2FA/TOTP, and LDAP are disabled via `config/filebrowser.yaml` to allow instant perimeter-secured access without duplicate login prompts.
 
 ### Network Security
-Local container authentication is intentionally disabled (`-SecurityTypes None -DisableBasicAuth` for KasmVNC and `--noauth` for FileBrowser) to provide friction-free access within the trusted network. When exposing ports to the internet, they should be placed behind an authenticated reverse proxy, Cloudflare Access (MFA/SSO), or VPN tunnel.
+Local container authentication is intentionally disabled (`-SecurityTypes None -DisableBasicAuth` for KasmVNC and `noauth: true` in `config/filebrowser.yaml` for FileBrowser Quantum) to provide friction-free access within the trusted network. When exposing ports to the internet, they should be placed behind an authenticated reverse proxy, Cloudflare Access (MFA/SSO), or VPN tunnel.
 
 ---
 
@@ -196,17 +197,19 @@ sudo systemctl stop antigravity-remote.service
 
 ## 6. Repository Layout
 
-| File | Purpose |
+| Path | Purpose |
 | :--- | :--- |
-| `Containerfile` | Debian 12, KasmVNC 1.5, FileBrowser 2.63, Openbox, English system locale, IDE install |
+| `Containerfile` | Debian 12, KasmVNC 1.5, FileBrowser Quantum, Openbox, English system locale, IDE install |
 | `.containerignore` | Build context exclusions (avoids copying build scripts, quadlets, and docs) |
-| `kasmvnc.yaml` | KasmVNC configuration (WebP, port 8080, dynamic resize, no auth) |
-| `openbox-rc.xml` | Window manager configuration for borderless, maximized fullscreen |
-| `openbox-autostart` | Resilient autostart loop for Antigravity IDE |
-| `entrypoint.sh` | Container bootstrap, auto-update check (5s timeout), KasmVNC and FileBrowser startup |
-| `containers-storage.conf` | fuse-overlayfs configuration for nested Podman |
+| `entrypoint.sh` | Container bootstrap, auto-update check (5s timeout), KasmVNC and FileBrowser Quantum startup |
 | `run_env.sh` | Interactive build and launch script (exposes ports 8080 and 8081) |
 | `deploy.sh` | Automatic systemd Quadlet deployment script (supports rootless and rootful) |
+| `config/` | Application and desktop service configurations (staged into `/etc/antigravity/`) |
+| ├── `containers-storage.conf` | fuse-overlayfs configuration for nested Podman |
+| ├── `filebrowser.yaml` | FileBrowser Quantum configuration (noauth mode, port 8081, `/filebrowser` baseURL) |
+| ├── `kasmvnc.yaml` | KasmVNC configuration (WebP, port 8080, dynamic resize, no auth) |
+| ├── `openbox-autostart` | Resilient autostart loop for Antigravity IDE |
+| └── `openbox-rc.xml` | Window manager configuration for borderless, maximized fullscreen |
 | `quadlet/` | Rootless Quadlet definitions (`antigravity-remote.container`, `antigravity-home.volume`) |
 | `quadlet-rootful/` | Rootful Quadlet definitions for system-wide deployments |
 

@@ -209,9 +209,9 @@ ok "Podman detected: ${PODMAN_VER}"
 step "2/6" "Preparing build directory..."
 
 if [ "$MODE" = "rootful" ]; then
-    run_on_target "sudo mkdir -p '${BUILD_DIR}' && sudo chown -R \$(id -u):\$(id -g) '${BUILD_DIR}'"
+    run_on_target "sudo rm -rf '${BUILD_DIR}' && sudo mkdir -p '${BUILD_DIR}' && sudo chown -R \$(id -u):\$(id -g) '${BUILD_DIR}'"
 else
-    run_on_target "mkdir -p '${BUILD_DIR}'"
+    run_on_target "rm -rf '${BUILD_DIR}' && mkdir -p '${BUILD_DIR}'"
 fi
 ok "Directory ${BUILD_DIR} ready on target"
 
@@ -222,17 +222,14 @@ step "3/6" "Transferring build files to target..."
 
 BUILD_FILES=(
     "Containerfile"
-    "containers-storage.conf"
-    "kasmvnc.yaml"
-    "openbox-rc.xml"
-    "openbox-autostart"
+    "config"
     "entrypoint.sh"
     ".containerignore"
 )
 
 for f in "${BUILD_FILES[@]}"; do
-    if [ ! -f "${SCRIPT_DIR}/${f}" ]; then
-        fail "Required file missing: ${SCRIPT_DIR}/${f}"
+    if [ ! -e "${SCRIPT_DIR}/${f}" ]; then
+        fail "Required file or directory missing: ${SCRIPT_DIR}/${f}"
     fi
     copy_to_target "${SCRIPT_DIR}/${f}" "${BUILD_DIR}/${f}"
 done
