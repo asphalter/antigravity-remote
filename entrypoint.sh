@@ -126,7 +126,16 @@ runuser -u antigravity -- vncserver :1 -geometry 1920x1080 -depth 24 -websocketP
 
 # 9. Start FileBrowser Quantum (port 8081, baseurl /filebrowser, root /home/antigravity)
 echo "[FileBrowser] Starting FileBrowser Quantum on port 8081 (config: /etc/antigravity/filebrowser.yaml)..."
-runuser -u antigravity -- filebrowser -c /etc/antigravity/filebrowser.yaml >/dev/null 2>&1 &
+mkdir -p /tmp/filebrowser_cache
+chown -R antigravity:antigravity /tmp/filebrowser_cache
+runuser -u antigravity -- filebrowser -c /etc/antigravity/filebrowser.yaml > /tmp/filebrowser.log 2>&1 &
+sleep 1
+if ! pgrep -u antigravity -x filebrowser >/dev/null 2>&1; then
+    echo "[FileBrowser] WARNING: FileBrowser process did not stay running! Log output:"
+    cat /tmp/filebrowser.log 2>/dev/null || true
+else
+    echo "[FileBrowser] FileBrowser Quantum is running successfully (PID $(pgrep -u antigravity -x filebrowser))."
+fi
 
 echo "=========================================================="
 echo " Antigravity Remote is ACTIVE and ready!"
