@@ -120,14 +120,21 @@ RUN useradd -m -u 1000 -s /bin/bash antigravity \
 RUN mkdir -p /etc/containers \
     && printf '[containers]\ncgroups = "disabled"\nnetns = "host"\n\n[engine]\ncgroup_manager = "cgroupfs"\n' > /etc/containers/containers.conf
 
+<<<<<<< HEAD
 # 8. Prepare configuration staging directory
 RUN mkdir -p /etc/antigravity
 
 # 9. Copy configuration files and startup scripts
+=======
+# 7. Prepare configuration staging directory and copy configuration
+RUN mkdir -p /etc/antigravity
+>>>>>>> d4017df (add KasmVNC branding to Antigravity logos)
 COPY config/ /etc/antigravity/
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh /etc/antigravity/openbox-autostart /etc/antigravity/brand_kasmvnc.py
 
-RUN chmod +x /usr/local/bin/entrypoint.sh /etc/antigravity/openbox-autostart
+# 8. Customize KasmVNC Web UI branding with official Antigravity IDE assets
+RUN python3 /etc/antigravity/brand_kasmvnc.py || true
 
 # 10. Expose KasmVNC Web UI (8080) and FileBrowser (8081)
 EXPOSE 8080 8081
