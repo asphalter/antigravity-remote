@@ -90,14 +90,16 @@ RUN useradd -m -u 1000 -s /bin/bash antigravity \
 RUN mkdir -p /etc/containers \
     && printf '[containers]\ncgroups = "disabled"\nnetns = "host"\n\n[engine]\ncgroup_manager = "cgroupfs"\n' > /etc/containers/containers.conf
 
-# 7. Prepare configuration staging directory and copy configuration
-RUN mkdir -p /etc/antigravity
+# 7. Prepare staging directories and copy configuration, media assets, and scripts
+RUN mkdir -p /etc/antigravity /etc/antigravity/media /etc/antigravity/scripts
 COPY config/ /etc/antigravity/
+COPY media/ /etc/antigravity/media/
+COPY scripts/ /etc/antigravity/scripts/
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh /etc/antigravity/openbox-autostart /etc/antigravity/brand_kasmvnc.py
+RUN chmod +x /usr/local/bin/entrypoint.sh /etc/antigravity/scripts/openbox-autostart /etc/antigravity/scripts/brand_kasmvnc.py
 
 # 8. Customize KasmVNC Web UI branding with official Antigravity IDE assets
-RUN python3 /etc/antigravity/brand_kasmvnc.py || true
+RUN python3 /etc/antigravity/scripts/brand_kasmvnc.py || true
 
 # 10. Expose KasmVNC Web UI (8080) and FileBrowser (8081)
 EXPOSE 8080 8081

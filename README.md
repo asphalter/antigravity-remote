@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/logo.png" alt="Google Antigravity Logo" width="120" height="120" />
+  <img src="media/antigravity.png" alt="Google Antigravity Logo" width="120" height="120" />
   <h1>Antigravity Remote v4</h1>
   <p><b>Web-Native Desktop Environment for Google Antigravity IDE</b></p>
   <p>A centralized, containerized development environment running <b>Google Antigravity IDE</b> on a headless server, seamlessly accessible from any modern web browser client (Windows, Linux, macOS, tablets) using standard HTML5 Canvas and WebSocket protocols, eliminating the need for local desktop clients or X11 forwarding.</p>
@@ -283,15 +283,19 @@ sudo systemctl stop antigravity-remote.service
 | `entrypoint.sh` | Container bootstrap, auto-update check (5s timeout), KasmVNC and FileBrowser Quantum startup |
 | `run_env.sh` | Interactive build and launch script (exposes ports 8080 and 8081) |
 | `deploy.sh` | Automatic systemd Quadlet deployment script (supports rootless and rootful) |
+| `scripts/` | Operational scripts (branding customizer and desktop autostart) |
+| ├── `brand_kasmvnc.py` | KasmVNC Web UI customizer (favicons, title, sidebar, dark vector splash screen) |
+| └── `openbox-autostart` | Resilient autostart loop for Antigravity IDE |
+| `media/` | Media assets (official Antigravity PNG and SVG vector logos) |
+| ├── `antigravity.png` | Official high-resolution Google Antigravity branding logo |
+| └── `antigravity.svg` | Vector Google Antigravity logo for splash screen & high-DPI scaling |
 | `config/` | Application and desktop service configurations (staged into `/etc/antigravity/`) |
 | ├── `containers-storage.conf` | fuse-overlayfs configuration for nested Podman |
 | ├── `filebrowser.yaml` | FileBrowser Quantum configuration (noauth mode, port 8081, `/filebrowser` baseURL) |
 | ├── `kasmvnc.yaml` | KasmVNC configuration (WebP, port 8080, dynamic resize, no auth) |
-| ├── `openbox-autostart` | Resilient autostart loop for Antigravity IDE |
 | └── `openbox-rc.xml` | Window manager configuration for borderless, maximized fullscreen |
 | `quadlet/` | Rootless Quadlet definitions (`antigravity-remote.container`, `antigravity-home.volume`) |
 | `quadlet-rootful/` | Rootful Quadlet definitions for system-wide deployments |
-| `docs/` | Project documentation assets and official Antigravity logo |
 
 ---
 

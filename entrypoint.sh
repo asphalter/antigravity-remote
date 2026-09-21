@@ -117,7 +117,11 @@ if [ ! -f /home/antigravity/.config/openbox/rc.xml ]; then
     cp /etc/antigravity/openbox-rc.xml /home/antigravity/.config/openbox/rc.xml
 fi
 if [ ! -f /home/antigravity/.config/openbox/autostart ]; then
-    cp /etc/antigravity/openbox-autostart /home/antigravity/.config/openbox/autostart
+    if [ -f /etc/antigravity/scripts/openbox-autostart ]; then
+        cp /etc/antigravity/scripts/openbox-autostart /home/antigravity/.config/openbox/autostart
+    else
+        cp /etc/antigravity/openbox-autostart /home/antigravity/.config/openbox/autostart
+    fi
     chmod +x /home/antigravity/.config/openbox/autostart
 fi
 chown -R antigravity:antigravity /home/antigravity/.config/openbox
@@ -183,7 +187,11 @@ rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 2>/dev/null || true
 # 7b. Apply Antigravity branding to KasmVNC Web UI (ensures logo & title persistence across updates)
 if [ -d /usr/share/kasmvnc/www ]; then
     echo "[Init] Customizing KasmVNC Web UI with Antigravity branding..."
-    python3 /etc/antigravity/brand_kasmvnc.py || true
+    if [ -f /etc/antigravity/scripts/brand_kasmvnc.py ]; then
+        python3 /etc/antigravity/scripts/brand_kasmvnc.py || true
+    else
+        python3 /etc/antigravity/brand_kasmvnc.py || true
+    fi
 fi
 
 # 8. Start KasmVNC Server (port 8080, no built-in auth — secure via external proxy, display :1)

@@ -28,17 +28,25 @@ os.makedirs(assets_dir, exist_ok=True)
 # 1. Resolve and copy Antigravity official icons
 config_dir = os.path.dirname(os.path.abspath(__file__))
 potential_pngs = [
+    os.path.join("/etc/antigravity/media", "antigravity.png"),
+    os.path.join(config_dir, "../media/antigravity.png"),
+    os.path.join(config_dir, "media/antigravity.png"),
+    os.path.join("/etc/antigravity/static", "antigravity.png"),
+    os.path.join(config_dir, "../static/antigravity.png"),
     os.path.join("/etc/antigravity", "antigravity.png"),
     os.path.join(config_dir, "antigravity.png"),
     os.path.join(OPT_DIR, "resources/app/resources/linux/code.png"),
-    os.path.join(config_dir, "../docs/logo.png"),
 ]
 
 potential_svgs = [
+    os.path.join("/etc/antigravity/media", "antigravity.svg"),
+    os.path.join(config_dir, "../media/antigravity.svg"),
+    os.path.join(config_dir, "media/antigravity.svg"),
+    os.path.join("/etc/antigravity/static", "antigravity.svg"),
+    os.path.join(config_dir, "../static/antigravity.svg"),
     os.path.join("/etc/antigravity", "antigravity.svg"),
     os.path.join(config_dir, "antigravity.svg"),
     os.path.join(OPT_DIR, "resources/app/out/vs/platform/browserOnboarding/static/antigravity.svg"),
-    os.path.join(config_dir, "../docs/antigravity.svg"),
 ]
 
 png_path = next((p for p in potential_pngs if os.path.isfile(p)), None)

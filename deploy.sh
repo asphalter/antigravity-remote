@@ -223,6 +223,8 @@ step "3/6" "Transferring build files to target..."
 BUILD_FILES=(
     "Containerfile"
     "config"
+    "media"
+    "scripts"
     "entrypoint.sh"
     ".containerignore"
 )
