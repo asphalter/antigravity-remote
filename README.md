@@ -1,6 +1,9 @@
-# Antigravity Remote v4 — Web-Native Desktop Environment
-
-A centralized, containerized development environment running **Google Antigravity IDE** on a headless server, seamlessly accessible from any modern web browser client (Windows, Linux, macOS, tablets) using standard HTML5 Canvas and WebSocket protocols, eliminating the need for local desktop clients or X11 forwarding.
+<div align="center">
+  <img src="docs/logo.png" alt="Google Antigravity Logo" width="120" height="120" />
+  <h1>Antigravity Remote v4</h1>
+  <p><b>Web-Native Desktop Environment for Google Antigravity IDE</b></p>
+  <p>A centralized, containerized development environment running <b>Google Antigravity IDE</b> on a headless server, seamlessly accessible from any modern web browser client (Windows, Linux, macOS, tablets) using standard HTML5 Canvas and WebSocket protocols, eliminating the need for local desktop clients or X11 forwarding.</p>
+</div>
 
 ---
 
@@ -87,6 +90,7 @@ FileBrowser Quantum (`gtsteffaniak/filebrowser`) runs on port 8081 with root `/h
 - **Upload**: Drag-and-drop or browse files and folders from your local device directly into `/home/antigravity`.
 - **Download**: Browse container files, download single files or select multiple files/directories to download as a zipped archive (`.zip`).
 - **Path-Based Routing**: Configured with `baseURL: "/filebrowser"`, allowing Cloudflare Tunnel to expose FileBrowser at `https://<domain>/filebrowser` seamlessly.
+- **Integrated Sidebar Shortcut**: A dedicated "FileBrowser" button is built directly into the KasmVNC left sliding menu, allowing instant access to `/filebrowser` in a new browser tab with one click.
 - **Frictionless Auth (`noauth`)**: Internal authentication, 2FA/TOTP, and LDAP are disabled via `config/filebrowser.yaml` to allow instant perimeter-secured access without duplicate login prompts.
 
 ### Network Security
@@ -96,8 +100,8 @@ Local container authentication is intentionally disabled (`-SecurityTypes None -
 
 ## 3. Quick Start
 
-### Launch with Script
-To build the image and start the container with a single command:
+### Option A: Launch with Automated Script
+To build the image and start the container with a single interactive command:
 
 ```bash
 cd antigravity-remote
@@ -108,6 +112,73 @@ To bind to custom host ports (e.g. IDE on 9090, FileBrowser on 9091):
 ```bash
 ANTIGRAVITY_PORT=9090 ANTIGRAVITY_FB_PORT=9091 ./run_env.sh
 ```
+
+### Option B: Manual Container Run (Podman CLI)
+If deploying or running the container manually without using helper scripts:
+
+```bash
+# 1. Build image (if building locally)
+podman build -t antigravity-remote .
+
+# 2. Create persistent volume
+podman volume create antigravity-home
+
+# 3. Launch container with required parameters
+podman run -d \
+  --name antigravity-remote \
+  --network pasta:-4 \
+  --device /dev/fuse \
+  --cap-add=SYS_ADMIN \
+  --cap-add=MKNOD \
+  --security-opt label=disable \
+  --shm-size=2g \
+  --memory=16g --cpus=8 \
+  -v antigravity-home:/home/antigravity \
+  -p 8080:8080 \
+  -p 8081:8081 \
+  antigravity-remote:latest
+```
+
+### Option C: Manual Container Run (Docker CLI)
+If running in a Docker-based environment:
+
+```bash
+# 1. Build image
+docker build -t antigravity-remote -f Containerfile .
+
+# 2. Create persistent volume
+docker volume create antigravity-home
+
+# 3. Launch container
+docker run -d \
+  --name antigravity-remote \
+  --device /dev/fuse \
+  --cap-add=SYS_ADMIN \
+  --cap-add=MKNOD \
+  --security-opt seccomp=unconfined \
+  --security-opt apparmor=unconfined \
+  --shm-size=2g \
+  --memory=16g --cpus=8 \
+  -v antigravity-home:/home/antigravity \
+  -p 8080:8080 \
+  -p 8081:8081 \
+  antigravity-remote:latest
+```
+
+### Required Flags, Capabilities & Devices Explained
+
+| Flag / Parameter | Category | Technical Justification |
+| :--- | :--- | :--- |
+| `--shm-size=2g` | **Shared Memory** | **Essential for Electron & Chromium GUI rendering**. Antigravity IDE and its Chromium browser helper rely heavily on shared memory (`/dev/shm`) for IPC, GPU software rasterization, and X11 framebuffers. The standard container limit (64 MB) causes sudden `SIGBUS` crashes, renderer disconnects, or black screens at 1080p and 4K resolutions. Allocating 2GB ensures stable desktop performance. |
+| `--device /dev/fuse` | **Hardware Device** | **Nested Podman / Filesystem Mounts**. Exposes `/dev/fuse` to the container, enabling the `fuse-overlayfs` driver. This allows running and building rootless `podman` containers directly inside the IDE terminal without requiring privileged access to the host kernel. |
+| `--cap-add=SYS_ADMIN` | **Linux Capability** | **Namespace & Mount Management**. Allows the non-root `antigravity` user inside the container to call `unshare`, create user and mount namespaces, and manage overlay filesystems for nested container execution. |
+| `--cap-add=MKNOD` | **Linux Capability** | **Device Node Creation**. Required by nested container runtimes to create essential pseudo-devices inside nested containers (such as `/dev/null`, `/dev/zero`, `/dev/random`, and `/dev/ptmx`). |
+| `--security-opt label=disable` | **Security (Podman)** | **SELinux Confinement Bypass**. On systems enforcing SELinux (RHEL, Fedora, Rocky, CentOS), disabling container label separation (`container_t`) prevents SELinux permission denials when nested containers allocate `fuse-overlayfs` storage mounts. |
+| `--security-opt seccomp=unconfined` | **Security (Docker)** | **Nested Syscall Permissions**. Docker's default Seccomp profile blocks `unshare` and `clone3` with specific namespace flags required by nested container engines. Disabling Seccomp filtering is needed if running nested Podman inside Docker. |
+| `-v antigravity-home:/home/antigravity` | **Storage Volume** | **100% Data Persistence**. Guarantees that workspaces, installed extensions (`~/.antigravity-ide`), configurations (`~/.config/Antigravity IDE`), and agent transcripts/conversations (`~/.gemini`) survive container recreations and image rebuilds. |
+| `-p 8080:8080 -p 8081:8081` | **Port Publishing** | Publishes port `8080` (KasmVNC HTML5 Desktop) and `8081` (FileBrowser Quantum Web Manager). |
+| `--network pasta:-4` | **Networking** | *(Podman)* High-performance user-mode networking with IPv4 support, ensuring ultra-low latency for WebSocket streaming. |
+| `--memory=16g --cpus=8` | **Resource Quota** | Recommended allocation for Google Antigravity's multi-threaded indexing, Language Server Protocols (LSP), and autonomous agent workflows. |
 
 ### Browser Access
 - **Antigravity IDE Desktop**: `http://localhost:8080/`
@@ -212,6 +283,7 @@ sudo systemctl stop antigravity-remote.service
 | └── `openbox-rc.xml` | Window manager configuration for borderless, maximized fullscreen |
 | `quadlet/` | Rootless Quadlet definitions (`antigravity-remote.container`, `antigravity-home.volume`) |
 | `quadlet-rootful/` | Rootful Quadlet definitions for system-wide deployments |
+| `docs/` | Project documentation assets and official Antigravity logo |
 
 ---
 
