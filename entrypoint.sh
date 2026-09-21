@@ -17,57 +17,86 @@ mkdir -p /home/antigravity
 # causing multi-minute startup delays as files accumulate.
 chown antigravity:antigravity /home/antigravity
 
-# 3. Check and auto-update Antigravity IDE on startup
+# 3. Dynamic On-Demand Installation and Auto-Update of Google Antigravity IDE
+FALLBACK_URL="https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/2.5.5-4923483625488384/linux-x64/Antigravity%20IDE.tar.gz"
+
 check_and_update_antigravity() {
     local installed_ver="none"
     if [ -f /opt/antigravity/version.txt ]; then
         installed_ver=$(cat /opt/antigravity/version.txt | tr -d '[:space:]')
     fi
-    echo "[Auto-Update] Installed local version: ${installed_ver}"
+    echo "[App-Manager] Current local version: ${installed_ver}"
 
-    echo "[Auto-Update] Checking for online updates (5s timeout)..."
-    local remote_url
+    local remote_url=""
+    echo "[App-Manager] Querying latest Google Antigravity release (5s timeout)..."
     remote_url=$(curl -sL -m 5 "https://antigravity.google/download/?os=linux" 2>/dev/null | grep -o 'https://edgedl.me.gvt1.com/edgedl/release2/[^"]*linux-x64/Antigravity%20IDE\.tar\.gz' | head -n 1 || true)
 
     if [ -z "$remote_url" ]; then
-        echo "[Auto-Update] Online check unavailable (offline or timeout). Continuing with current version (${installed_ver})."
-        return 0
+        if [ "$installed_ver" = "none" ]; then
+            echo "[App-Manager] Notice: Download page query timed out. Using verified baseline release URL..."
+            remote_url="$FALLBACK_URL"
+        else
+            echo "[App-Manager] Online check unavailable (offline/timeout). Continuing with installed version (${installed_ver})."
+            return 0
+        fi
     fi
 
     local remote_ver
     remote_ver=$(echo "$remote_url" | sed -E 's|.*/stable/([^/]+)/.*|\1|')
-    echo "[Auto-Update] Latest online version available: ${remote_ver}"
+    echo "[App-Manager] Latest available online version: ${remote_ver}"
 
-    if [ "$remote_ver" != "$installed_ver" ] && [ -n "$remote_ver" ]; then
-        echo "[Auto-Update] New version detected (${remote_ver} != ${installed_ver})!"
-        echo "[Auto-Update] Downloading update from: ${remote_url}..."
-        if curl -fSL -m 180 "$remote_url" -o /tmp/antigravity-update.tar.gz 2>/dev/null; then
-            echo "[Auto-Update] Extracting new version to staging directory..."
-            # Atomic update: extract to staging dir, then swap directories.
-            # If extraction is interrupted, /opt/antigravity remains untouched.
+    if [ "$remote_ver" != "$installed_ver" ]; then
+        if [ "$installed_ver" = "none" ]; then
+            echo "[App-Manager] Initial installation required. Downloading Antigravity IDE ${remote_ver}..."
+        else
+            echo "[App-Manager] New release detected (${remote_ver} != ${installed_ver})! Downloading update..."
+        fi
+
+        echo "[App-Manager] Fetching: ${remote_url}..."
+        if curl -fSL -m 300 "$remote_url" -o /tmp/antigravity-download.tar.gz; then
+            echo "[App-Manager] Extracting binaries to staging directory..."
             rm -rf /opt/antigravity-staging
             mkdir -p /opt/antigravity-staging
-            if tar -xzf /tmp/antigravity-update.tar.gz -C /opt/antigravity-staging --strip-components=1; then
+            if tar -xzf /tmp/antigravity-download.tar.gz -C /opt/antigravity-staging --strip-components=1; then
                 echo "$remote_ver" > /opt/antigravity-staging/version.txt
-                chmod +x /opt/antigravity-staging/antigravity-ide
-                # Swap: old → backup, staging → live, then clean up
+                chmod +x /opt/antigravity-staging/antigravity-ide 2>/dev/null || true
+
+                # Atomic swap: old → backup, staging → live, clean backup
                 rm -rf /opt/antigravity-old
-                mv /opt/antigravity /opt/antigravity-old
+                if [ -d /opt/antigravity ] && [ "$installed_ver" != "none" ]; then
+                    mv /opt/antigravity /opt/antigravity-old
+                else
+                    rm -rf /opt/antigravity
+                fi
                 mv /opt/antigravity-staging /opt/antigravity
                 rm -rf /opt/antigravity-old
-                echo "[Auto-Update] Antigravity IDE successfully updated to version ${remote_ver}!"
-                echo "[Auto-Update] Note: Conversations (~/.gemini), history, and projects in /home/antigravity are 100% preserved."
+
+                # Ensure launcher wrapper script is in place
+                printf '#!/bin/bash\nexec /opt/antigravity/antigravity-ide --no-sandbox --disable-gpu --disable-dev-shm-usage "$@"\n' > /usr/local/bin/antigravity
+                chmod +x /usr/local/bin/antigravity
+                ln -sf /usr/local/bin/antigravity /usr/local/bin/antigravity-ide
+
+                echo "[App-Manager] Antigravity IDE ${remote_ver} installed and ready!"
+                echo "[App-Manager] Note: Workspaces, settings, and agent conversations in /home/antigravity remain 100% intact."
             else
-                echo "[Auto-Update] Extraction failed. Keeping current version (${installed_ver})."
+                echo "[App-Manager] ERROR: Extraction failed!"
                 rm -rf /opt/antigravity-staging
+                if [ "$installed_ver" = "none" ]; then
+                    echo "[App-Manager] FATAL: Initial install failed, cannot start IDE."
+                    exit 1
+                fi
             fi
-            rm -f /tmp/antigravity-update.tar.gz
+            rm -f /tmp/antigravity-download.tar.gz
         else
-            echo "[Auto-Update] Download failed. Keeping current version (${installed_ver})."
-            rm -f /tmp/antigravity-update.tar.gz
+            echo "[App-Manager] ERROR: Download failed!"
+            rm -f /tmp/antigravity-download.tar.gz
+            if [ "$installed_ver" = "none" ]; then
+                echo "[App-Manager] FATAL: Initial download failed, cannot start IDE."
+                exit 1
+            fi
         fi
     else
-        echo "[Auto-Update] Application is already at latest version (${installed_ver}). No download required."
+        echo "[App-Manager] Application is already at latest version (${installed_ver}). No download required."
     fi
 }
 
@@ -92,6 +121,37 @@ if [ ! -f /home/antigravity/.config/openbox/autostart ]; then
     chmod +x /home/antigravity/.config/openbox/autostart
 fi
 chown -R antigravity:antigravity /home/antigravity/.config/openbox
+
+# 5b. Pre-configure Agent mode to Full Access ONLY if RequestReviewPolicy=false
+# Supports RequestReviewPolicy (and handles typo RequestReviewPoilicy or legacy REQUESTREVIEW)
+policy_val="${RequestReviewPolicy:-${RequestReviewPoilicy:-${REQUESTREVIEW:-}}}"
+if [ "${policy_val,,}" = "false" ]; then
+    echo "[Init] RequestReviewPolicy=false: Pre-configuring Agent mode to Full Access (Always Proceed)..."
+    python3 -c '
+import sqlite3, os
+
+db_dir = "/home/antigravity/.config/Antigravity IDE/User/globalStorage"
+db_path = os.path.join(db_dir, "state.vscdb")
+os.makedirs(db_dir, exist_ok=True)
+
+try:
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    cur.execute("CREATE TABLE IF NOT EXISTS ItemTable (key TEXT PRIMARY KEY, value TEXT)")
+    
+    full_access_val = "Cj4KGHBlcm1pc3Npb25fZ3JhbnRzX2dsb2JhbBIiCiBDaFpsZUdWamRYUmxYM1Z5YkNoc2IyTmhiR2h2YzNRcAowCiZ0ZXJtaW5hbEF1dG9FeGVjdXRpb25Qb2xpY3lTZW50aW5lbEtleRIGCgRFQU09CikKH2FydGlmYWN0UmV2aWV3UG9saWN5U2VudGluZWxLZXkSBgoERUFJPQ=="
+    
+    cur.execute("INSERT OR REPLACE INTO ItemTable (key, value) VALUES (\"antigravityUnifiedStateSync.agentPreferences\", ?)", (full_access_val,))
+    conn.commit()
+    conn.close()
+    print("[Init] Agent mode set to Full Access in state.vscdb.")
+except Exception as e:
+    print(f"[Init] Warning: Could not update state.vscdb: {e}")
+' 2>/dev/null || true
+    chown -R antigravity:antigravity "/home/antigravity/.config/Antigravity IDE" 2>/dev/null || true
+else
+    echo "[Init] RequestReviewPolicy is not set to 'false'. Leaving database and agent review settings untouched."
+fi
 
 # 6. Configure KasmVNC Server
 echo "[Init] Configuring KasmVNC server..."

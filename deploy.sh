@@ -239,7 +239,7 @@ ok "Build configuration files transferred successfully"
 # 4. Build container image on target
 # --------------------------------------------------------------------------
 step "4/6" "Building image '${IMAGE_NAME}' on target..."
-echo -e "       (Downloads latest Antigravity IDE release during build)"
+echo -e "       (Compiling lightweight base image; Antigravity IDE is fetched on-demand at startup)"
 
 if [ "$MODE" = "rootful" ]; then
     BUILD_CMD="cd '${BUILD_DIR}' && sudo podman build -t '${IMAGE_NAME}' . < /dev/null"

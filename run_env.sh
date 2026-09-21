@@ -27,6 +27,7 @@ CONTAINER_NAME="${ANTIGRAVITY_CONTAINER:-antigravity-remote}"
 VOLUME_NAME="${ANTIGRAVITY_VOLUME:-antigravity-home}"
 HOST_PORT="${ANTIGRAVITY_PORT:-8080}"
 FILEBROWSER_PORT="${ANTIGRAVITY_FB_PORT:-8081}"
+RequestReviewPolicy="${RequestReviewPolicy:-${RequestReviewPoilicy:-${REQUESTREVIEW:-false}}}"
 
 # Output styling colors
 RED='\033[0;31m'
@@ -45,13 +46,14 @@ echo -e "  FileBrowser Port:  ${BOLD}${FILEBROWSER_PORT}${NC}"
 echo -e "  Image:             ${BOLD}${IMAGE_NAME}${NC}"
 echo -e "  Container:         ${BOLD}${CONTAINER_NAME}${NC}"
 echo -e "  Home Volume:       ${BOLD}${VOLUME_NAME}${NC}"
+echo -e "  Review Policy:     ${BOLD}${RequestReviewPolicy}${NC}"
 echo ""
 
 # --------------------------------------------------------------------------
 # 1. Build container image
 # --------------------------------------------------------------------------
 echo -e "${YELLOW}[1/4]${NC} Building container image ${IMAGE_NAME}..."
-echo -e "       (Downloads latest Antigravity IDE Desktop release during build)"
+echo -e "       (Compiling lightweight base image; Antigravity IDE is fetched on-demand at startup)"
 podman build -t "${IMAGE_NAME}" . < /dev/null
 echo -e "${GREEN}[OK]${NC} Container image built successfully."
 echo ""
@@ -88,12 +90,12 @@ echo -e "${YELLOW}[4/4]${NC} Starting container ${CONTAINER_NAME}..."
 
 podman run -d \
     --name "${CONTAINER_NAME}" \
-    --network pasta:-4 \
     --device /dev/fuse \
     --cap-add=SYS_ADMIN --cap-add=MKNOD \
     --security-opt label=disable \
     --shm-size=2g \
     --memory=16g --cpus=8 \
+    -e RequestReviewPolicy="${RequestReviewPolicy}" \
     -v "${VOLUME_NAME}:/home/antigravity" \
     -p "${HOST_PORT}:8080" \
     -p "${FILEBROWSER_PORT}:8081" \

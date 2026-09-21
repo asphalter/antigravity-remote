@@ -72,26 +72,11 @@ RUN curl -fSL -o /tmp/kasmvncserver.deb "https://github.com/kasmtech/KasmVNC/rel
 RUN curl -fsSL -o /usr/local/bin/filebrowser "https://github.com/gtsteffaniak/filebrowser/releases/download/v1.5.6-stable/linux-amd64-filebrowser" \
     && chmod +x /usr/local/bin/filebrowser
 
-# 4. Dynamic download and baseline installation of Google Antigravity IDE Desktop
-RUN set -ex; \
-    echo "Resolving dynamic download URL for Antigravity IDE (Linux x64)..."; \
-    URL=$(curl -sL "https://antigravity.google/download/?os=linux" | grep -o 'https://edgedl.me.gvt1.com/edgedl/release2/[^"]*linux-x64/Antigravity%20IDE\.tar\.gz' | head -n 1); \
-    if [ -z "$URL" ]; then \
-        echo "Notice: URL not found on download page. Using verified fallback URL..."; \
-        URL="https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/2.5.5-4923483625488384/linux-x64/Antigravity%20IDE.tar.gz"; \
-    fi; \
-    VERSION=$(echo "$URL" | sed -E 's|.*/stable/([^/]+)/.*|\1|'); \
-    echo "Detected version: $VERSION"; \
-    echo "Downloading from: $URL"; \
-    curl -fSL "$URL" -o /tmp/antigravity.tar.gz; \
-    mkdir -p /opt/antigravity; \
-    tar -xzf /tmp/antigravity.tar.gz -C /opt/antigravity --strip-components=1; \
-    rm -f /tmp/antigravity.tar.gz; \
-    echo "$VERSION" > /opt/antigravity/version.txt; \
-    chmod +x /opt/antigravity/antigravity-ide; \
-    printf '#!/bin/bash\nexec /opt/antigravity/antigravity-ide --no-sandbox --disable-gpu --disable-dev-shm-usage "$@"\n' > /usr/local/bin/antigravity; \
-    chmod +x /usr/local/bin/antigravity; \
-    ln -sf /usr/local/bin/antigravity /usr/local/bin/antigravity-ide
+# 4. Prepare Antigravity IDE launcher wrapper (binary is fetched on-demand at container start)
+RUN mkdir -p /opt/antigravity \
+    && printf '#!/bin/bash\nexec /opt/antigravity/antigravity-ide --no-sandbox --disable-gpu --disable-dev-shm-usage "$@"\n' > /usr/local/bin/antigravity \
+    && chmod +x /usr/local/bin/antigravity \
+    && ln -sf /usr/local/bin/antigravity /usr/local/bin/antigravity-ide
 
 # 5. Configure non-root 'antigravity' user (UID 1000) and subuid/subgid mapping
 RUN useradd -m -u 1000 -s /bin/bash antigravity \

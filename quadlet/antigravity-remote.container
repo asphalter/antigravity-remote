@@ -8,7 +8,6 @@ Image=localhost/antigravity-remote:latest
 ContainerName=antigravity-remote
 
 # --- Network: Publish ports to host (8080: IDE, 8081: FileBrowser) ---
-Network=pasta:-4
 PublishPort=8080:8080
 PublishPort=8081:8081
 
@@ -21,6 +20,9 @@ SecurityLabelDisable=true
 # --- Resource allocation ---
 ShmSize=2g
 PodmanArgs=--memory=16g --cpus=8
+
+# --- Environment variables ---
+Environment=RequestReviewPolicy=false
 
 # --- Persistent volume for /home/antigravity ---
 Volume=antigravity-home.volume:/home/antigravity

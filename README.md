@@ -11,6 +11,7 @@
 
 Built on **Debian 12 Bookworm**, the stack integrates:
 - **Google Antigravity IDE Desktop**: Native Electron application with complete IDE capabilities, extensions, and agent support.
+- **Ultra-Lightweight Base Image & On-Demand Download**: Antigravity IDE is not bundled into the image layer at build time, reducing image size by ~1.2 GB and allowing near-instant image compilation and registry pulls. The IDE binary is fetched on-demand upon first container start and cached locally.
 - **Boot-Time Auto-Update**: Checks for new Google releases at startup and updates the core application binaries in-place while keeping user data and conversations 100% intact.
 - **KasmVNC Server (Port 8080)**: Next-generation VNC server with integrated web server, ultra-low-latency WebP compression, differential screen rect-encoding, and bidirectional clipboard.
 - **FileBrowser Quantum (Port 8081)**: Actively maintained web file manager (`gtsteffaniak/filebrowser`) serving `/home/antigravity` with drag-and-drop upload, zip download, zero-login frictionless access (`noauth`), and path-based routing under `/filebrowser`.
@@ -75,11 +76,17 @@ Built on **Debian 12 Bookworm**, the stack integrates:
 
 ## 2. Key Features
 
+### Lightweight Container Image & On-Demand Installation
+The container image does not bundle the heavy ~1.2 GB Antigravity IDE application binaries into the build layer. This provides key advantages:
+- **Fast Build & Pull**: Image compilation finishes in seconds, and image pulls/pushes across registries (e.g. Docker Hub) are lightweight and fast.
+- **Always Latest Version**: Upon initial container startup, `entrypoint.sh` automatically fetches the latest official Antigravity IDE release from Google.
+- **Persistent Caching**: The installed binary lives inside `/opt/antigravity`. When the container is stopped and restarted, the application starts immediately in <0.3s without re-downloading.
+
 ### Boot-Time Auto-Update & Data Preservation
-On container startup, `entrypoint.sh` queries `https://antigravity.google/download/?os=linux` with a non-blocking 5-second safety timeout:
+On subsequent container starts, `entrypoint.sh` checks `https://antigravity.google/download/?os=linux` with a non-blocking 5-second safety timeout:
 - If a newer release is published compared to `/opt/antigravity/version.txt`, it downloads and extracts the update into a staging directory, then atomically swaps it into place — ensuring the live installation is never left in a partial state.
 - If already up-to-date, the check finishes in under 0.3s and the IDE boots instantly without re-downloading.
-- If offline, it gracefully falls back to the installed version without blocking.
+- If offline or unreachable, it gracefully continues with the installed local version without blocking.
 - **Data Safety Guarantee**: Updates strictly touch application binaries in `/opt/antigravity/`. All **agent conversations and transcripts** (`~/.gemini/`), **IDE settings and state** (`~/.config/Antigravity IDE`), **installed extensions** (`~/.antigravity-ide/`), and **workspaces** reside on the persistent volume `/home/antigravity` and are **never modified or lost**.
 
 ### Dynamic Resolution (4K UHD & 1080p)
@@ -126,13 +133,13 @@ podman volume create antigravity-home
 # 3. Launch container with required parameters
 podman run -d \
   --name antigravity-remote \
-  --network pasta:-4 \
   --device /dev/fuse \
   --cap-add=SYS_ADMIN \
   --cap-add=MKNOD \
   --security-opt label=disable \
   --shm-size=2g \
   --memory=16g --cpus=8 \
+  -e RequestReviewPolicy=false \
   -v antigravity-home:/home/antigravity \
   -p 8080:8080 \
   -p 8081:8081 \
@@ -159,6 +166,7 @@ docker run -d \
   --security-opt apparmor=unconfined \
   --shm-size=2g \
   --memory=16g --cpus=8 \
+  -e RequestReviewPolicy=false \
   -v antigravity-home:/home/antigravity \
   -p 8080:8080 \
   -p 8081:8081 \
@@ -175,9 +183,9 @@ docker run -d \
 | `--cap-add=MKNOD` | **Linux Capability** | **Device Node Creation**. Required by nested container runtimes to create essential pseudo-devices inside nested containers (such as `/dev/null`, `/dev/zero`, `/dev/random`, and `/dev/ptmx`). |
 | `--security-opt label=disable` | **Security (Podman)** | **SELinux Confinement Bypass**. On systems enforcing SELinux (RHEL, Fedora, Rocky, CentOS), disabling container label separation (`container_t`) prevents SELinux permission denials when nested containers allocate `fuse-overlayfs` storage mounts. |
 | `--security-opt seccomp=unconfined` | **Security (Docker)** | **Nested Syscall Permissions**. Docker's default Seccomp profile blocks `unshare` and `clone3` with specific namespace flags required by nested container engines. Disabling Seccomp filtering is needed if running nested Podman inside Docker. |
+| `-e RequestReviewPolicy=false` | **Agent Permission Mode** | *(Optional)* When set to `false`, pre-configures the Antigravity agent in `state.vscdb` to **Full Access** (`EAGER` terminal execution & `TURBO` review policy), enabling autonomous workflows without interactive confirmation prompts. If omitted or set to any other value, the database is left completely untouched. |
 | `-v antigravity-home:/home/antigravity` | **Storage Volume** | **100% Data Persistence**. Guarantees that workspaces, installed extensions (`~/.antigravity-ide`), configurations (`~/.config/Antigravity IDE`), and agent transcripts/conversations (`~/.gemini`) survive container recreations and image rebuilds. |
 | `-p 8080:8080 -p 8081:8081` | **Port Publishing** | Publishes port `8080` (KasmVNC HTML5 Desktop) and `8081` (FileBrowser Quantum Web Manager). |
-| `--network pasta:-4` | **Networking** | *(Podman)* High-performance user-mode networking with IPv4 support, ensuring ultra-low latency for WebSocket streaming. |
 | `--memory=16g --cpus=8` | **Resource Quota** | Recommended allocation for Google Antigravity's multi-threaded indexing, Language Server Protocols (LSP), and autonomous agent workflows. |
 
 ### Browser Access
