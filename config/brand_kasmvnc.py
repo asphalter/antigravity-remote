@@ -5,8 +5,10 @@ Customizes KasmVNC Web UI with Google Antigravity IDE branding:
 - Sets tab title permanently to 'Antigravity'
 - Replaces sidebar logo with Antigravity branding card
 - Injects FileBrowser Quantum quick-link in the sidebar
+- Customizes transition / connecting splash screen with official Antigravity vector logo and 'Connecting...'
 """
 
+import base64
 import glob
 import os
 import re
@@ -42,10 +44,8 @@ potential_svgs = [
 png_path = next((p for p in potential_pngs if os.path.isfile(p)), None)
 svg_path = next((p for p in potential_svgs if os.path.isfile(p)), None)
 
-logo_data_uri = "./assets/antigravity.png"
-
-if svg_path:
-    shutil.copy2(svg_path, os.path.join(assets_dir, "antigravity.svg"))
+png_data_uri = "./assets/antigravity.png"
+svg_data_uri = "./assets/antigravity.svg"
 
 if png_path:
     dest_png = os.path.join(assets_dir, "antigravity.png")
@@ -53,19 +53,116 @@ if png_path:
     for logo_file in glob.glob(os.path.join(assets_dir, "368_kasm_logo_only_*.png")):
         shutil.copy2(dest_png, logo_file)
     with open(png_path, "rb") as f:
-        import base64
-        b64 = base64.b64encode(f.read()).decode("ascii")
-        logo_data_uri = f"data:image/png;base64,{b64}"
-    print(f"[Brand] Loaded real Antigravity logo from {png_path} ({len(logo_data_uri)} chars data URI)")
+        b64_png = base64.b64encode(f.read()).decode("ascii")
+        png_data_uri = f"data:image/png;base64,{b64_png}"
+    print(f"[Brand] Loaded real Antigravity PNG logo from {png_path} ({len(png_data_uri)} chars)")
 
-# 2. Patch index.html and vnc.html
+if svg_path:
+    dest_svg = os.path.join(assets_dir, "antigravity.svg")
+    shutil.copy2(svg_path, dest_svg)
+    with open(svg_path, "rb") as f:
+        b64_svg = base64.b64encode(f.read()).decode("ascii")
+        svg_data_uri = f"data:image/svg+xml;base64,{b64_svg}"
+    print(f"[Brand] Loaded real Antigravity SVG logo from {svg_path} ({len(svg_data_uri)} chars)")
+else:
+    svg_data_uri = png_data_uri
+
+# 2. Splash Screen (Transition / Connecting) Configuration
+splash_css = """
+<style id="antigravity-splash-style">
+#noVNC_transition {
+    position: fixed !important;
+    top: 0 !important; left: 0 !important; bottom: 0 !important; right: 0 !important;
+    background: #0f172a !important;
+    background-image: none !important;
+    color: #f1f5f9 !important;
+    display: none;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 50 !important;
+    transition: opacity 0.8s ease-in-out !important;
+}
+:root.noVNC_loading #noVNC_transition,
+:root.noVNC_connecting #noVNC_transition,
+:root.noVNC_disconnecting #noVNC_transition,
+:root.noVNC_reconnecting #noVNC_transition {
+    display: flex !important;
+}
+.noVNC_ag_logo_container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    animation: agPulse 2.5s infinite ease-in-out;
+}
+.noVNC_ag_logo {
+    width: 140px;
+    height: 140px;
+    object-fit: contain;
+    filter: drop-shadow(0 10px 25px rgba(59, 130, 246, 0.3));
+}
+.noVNC_ag_title {
+    color: #ffffff;
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-top: 16px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+#noVNC_transition_text {
+    color: #94a3b8 !important;
+    font-size: 16px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.8px !important;
+    margin-top: 14px !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+.noVNC_ag_spinner {
+    display: inline-flex;
+    gap: 6px;
+    margin-top: 20px;
+}
+.noVNC_ag_spinner div {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #38bdf8;
+    animation: agBounce 1.4s infinite ease-in-out both;
+}
+.noVNC_ag_spinner div:nth-child(1) { animation-delay: -0.32s; }
+.noVNC_ag_spinner div:nth-child(2) { animation-delay: -0.16s; }
+@keyframes agBounce {
+    0%, 80%, 100% { transform: scale(0); opacity: 0.3; }
+    40% { transform: scale(1); opacity: 1; }
+}
+@keyframes agPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+}
+</style>
+"""
+
+splash_html = (
+    '<div id="noVNC_transition">'
+    '<div class="noVNC_ag_logo_container">'
+    f'<img class="noVNC_ag_logo" src="{svg_data_uri}" alt="Antigravity">'
+    '<div class="noVNC_ag_title">Antigravity</div>'
+    '</div>'
+    '<div id="noVNC_transition_text">Connecting...</div>'
+    '<div><input type="button" id="noVNC_cancel_reconnect_button" value="Cancel" class="noVNC_submit"></div>'
+    '<div class="noVNC_ag_spinner"><div></div><div></div><div></div></div>'
+    '</div>'
+)
+
+# 3. Patch index.html and vnc.html
 replacement_logo_html = (
     '<h1 class="noVNC_logo" style="background: rgba(255, 255, 255, 0.08); '
     'border-radius: 8px; padding: 10px 8px; margin: 5px 0 8px 0; display: flex; '
     'align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">'
     '<a href="https://antigravity.google" target="_blank" title="Google Antigravity IDE" '
     'style="display: flex; align-items: center; justify-content: center; text-decoration: none; width: 100%;">'
-    f'<img src="{logo_data_uri}" style="width: 28px; height: 28px; object-fit: contain; border-radius: 4px;" alt="Antigravity">'
+    f'<img src="{svg_data_uri}" style="width: 28px; height: 28px; object-fit: contain; border-radius: 4px;" alt="Antigravity">'
     '<span style="color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif; '
     'font-size: 15px; font-weight: 600; letter-spacing: 0.5px; margin-left: 8px;">Antigravity</span>'
     '</a></h1>'
@@ -85,8 +182,8 @@ replacement_logo_html = (
 
 title_script = (
     '<title>Antigravity</title>'
-    f'<link rel="icon" type="image/png" href="{logo_data_uri}">'
-    '<link rel="icon" type="image/svg+xml" href="./assets/antigravity.svg">'
+    f'<link rel="icon" type="image/svg+xml" href="{svg_data_uri}">'
+    f'<link rel="icon" type="image/png" href="{png_data_uri}">'
     '<script>document.title="Antigravity";'
     'try{Object.defineProperty(document,"title",{get:function(){return"Antigravity"},set:function(){},configurable:true});}catch(e){}'
     '</script>'
@@ -100,17 +197,52 @@ for filename in ["index.html", "vnc.html"]:
     with open(filepath, "r", encoding="utf-8") as f:
         html = f.read()
 
+    # 3a. Title and favicons
     if "<title>KasmVNC</title>" in html:
         html = html.replace("<title>KasmVNC</title>", title_script)
+    elif "<title>Antigravity</title>" in html and "antigravity-splash-style" not in html:
+        # ensure favicons are fresh
+        pass
 
+    # 3b. Sidebar logo and FileBrowser link
     if '<h1 class="noVNC_logo">' in html and 'id="noVNC_filebrowser_link"' not in html:
         html = re.sub(r'<h1 class="noVNC_logo">.*?</h1>', replacement_logo_html, html, count=1, flags=re.DOTALL)
+
+    # 3c. Splash styles injection in <head>
+    if "antigravity-splash-style" not in html and "</head>" in html:
+        html = html.replace("</head>", f"{splash_css}\n</head>")
+
+    # 3d. Replace transition / connecting splash container in <body>
+    target_transition = '<div id="noVNC_transition"><div id="noVNC_transition_text"></div><div><input type="button" id="noVNC_cancel_reconnect_button" value="Cancel" class="noVNC_submit"></div><div class="noVNC_spinner"></div></div>'
+    if target_transition in html:
+        html = html.replace(target_transition, splash_html)
+    elif "noVNC_ag_logo_container" not in html and '<div id="noVNC_transition">' in html:
+        transition_pattern = r'<div id="noVNC_transition">.*?<div id="noVNC_container">'
+        m = re.search(transition_pattern, html, flags=re.DOTALL)
+        if m:
+            html = html[:m.start()] + splash_html + html[m.end() - len('<div id="noVNC_container">'):]
 
     with open(filepath, "w", encoding="utf-8") as f:
         f.write(html)
     print(f"[Brand] Successfully patched {filename} ({len(html)} bytes)")
 
-# 3. Patch assets/ui-*.js
+# 4. Patch assets/ui-*.css (remove legacy KasmVNC logo background)
+for css_file in glob.glob(os.path.join(assets_dir, "ui-*.css")):
+    with open(css_file, "r", encoding="utf-8") as f:
+        css = f.read()
+
+    # Replace legacy KasmVNC SVG background with clean dark theme color
+    css_patched = re.sub(
+        r'#noVNC_transition\{[^}]*background:#fff url\("data:image/svg\+xml,[^"]*"\)[^;]*;',
+        '#noVNC_transition{background:#0f172a;',
+        css
+    )
+    if css_patched != css:
+        with open(css_file, "w", encoding="utf-8") as f:
+            f.write(css_patched)
+        print(f"[Brand] Successfully stripped KasmVNC SVG background from {os.path.basename(css_file)}")
+
+# 5. Patch assets/ui-*.js (title strings)
 for js_file in glob.glob(os.path.join(assets_dir, "ui-*.js")):
     with open(js_file, "r", encoding="utf-8") as f:
         js = f.read()
@@ -131,8 +263,8 @@ for js_file in glob.glob(os.path.join(assets_dir, "ui-*.js")):
             f.write(js)
         print(f"[Brand] Successfully patched {os.path.basename(js_file)}")
 
-# 4. Marker file
+# 6. Marker file
 with open(os.path.join(assets_dir, ".antigravity_branded"), "w") as f:
     f.write("branded\n")
 
-print("[Brand] Antigravity branding applied cleanly.")
+print("[Brand] Antigravity branding & vector splash screen applied cleanly.")
