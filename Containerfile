@@ -47,6 +47,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgtk-3-0 \
     # Podman-in-Podman (rootless container runtime) \
     podman \
+    netavark \
+    aardvark-dns \
+    catatonit \
     fuse-overlayfs \
     slirp4netns \
     uidmap \
@@ -88,7 +91,8 @@ RUN useradd -m -u 1000 -s /bin/bash antigravity \
 
 # 6. Default nested Podman configuration
 RUN mkdir -p /etc/containers \
-    && printf '[containers]\ncgroups = "disabled"\nnetns = "host"\n\n[engine]\ncgroup_manager = "cgroupfs"\n' > /etc/containers/containers.conf
+    && printf '[containers]\ncgroups = "disabled"\n\n[engine]\ncgroup_manager = "cgroupfs"\n' > /etc/containers/containers.conf \
+    && printf 'unqualified-search-registries = ["docker.io"]\n' > /etc/containers/registries.conf
 
 # 7. Prepare staging directories and copy configuration, media assets, and scripts
 RUN mkdir -p /etc/antigravity /etc/antigravity/media /etc/antigravity/scripts
