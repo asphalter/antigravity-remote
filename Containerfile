@@ -1,5 +1,9 @@
 FROM debian:bookworm-slim
 
+# 0. Display Antigravity Remote banner at start of compilation
+COPY scripts/print_banner.sh /tmp/banner.sh
+RUN /tmp/banner.sh && rm -f /tmp/banner.sh
+
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=en_US.UTF-8

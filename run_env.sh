@@ -37,6 +37,11 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m' # No Color
 
+# Display official Antigravity ASCII banner
+if [ -f "${SCRIPT_DIR}/scripts/print_banner.sh" ]; then
+    "${SCRIPT_DIR}/scripts/print_banner.sh"
+fi
+
 echo -e "${CYAN}══════════════════════════════════════════════════════════════${NC}"
 echo -e "${CYAN}  Antigravity Remote — Web-Native Desktop Environment${NC}"
 echo -e "${CYAN}══════════════════════════════════════════════════════════════${NC}"

@@ -283,9 +283,10 @@ sudo systemctl stop antigravity-remote.service
 | `entrypoint.sh` | Container bootstrap, auto-update check (5s timeout), KasmVNC and FileBrowser Quantum startup |
 | `run_env.sh` | Interactive build and launch script (exposes ports 8080 and 8081) |
 | `deploy.sh` | Automatic systemd Quadlet deployment script (supports rootless and rootful) |
-| `scripts/` | Operational scripts (branding customizer and desktop autostart) |
+| `scripts/` | Operational scripts (branding customizer, desktop autostart, and ASCII banner) |
 | ├── `brand_kasmvnc.py` | KasmVNC Web UI customizer (favicons, title, sidebar, dark vector splash screen) |
-| └── `openbox-autostart` | Resilient autostart loop for Antigravity IDE |
+| ├── `openbox-autostart` | Resilient autostart loop for Antigravity IDE |
+| └── `print_banner.sh` | Terminal ASCII banner generator with official Antigravity gradient |
 | `media/` | Media assets (official Antigravity PNG and SVG vector logos) |
 | ├── `antigravity.png` | Official high-resolution Google Antigravity branding logo |
 | └── `antigravity.svg` | Vector Google Antigravity logo for splash screen & high-DPI scaling |

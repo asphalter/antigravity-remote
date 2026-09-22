@@ -179,6 +179,10 @@ fi
 # --------------------------------------------------------------------------
 # Deployment execution
 # --------------------------------------------------------------------------
+if [ -f "${SCRIPT_DIR}/scripts/print_banner.sh" ]; then
+    "${SCRIPT_DIR}/scripts/print_banner.sh"
+fi
+
 header "Antigravity Remote — Deploy ${MODE^}"
 
 if [ "$LOCAL_DEPLOY" = true ]; then
