@@ -126,35 +126,63 @@ if [ ! -f /home/antigravity/.config/openbox/autostart ]; then
 fi
 chown -R antigravity:antigravity /home/antigravity/.config/openbox
 
-# 5b. Pre-configure Agent mode to Full Access ONLY if RequestReviewPolicy=false
-# Supports RequestReviewPolicy (and handles typo RequestReviewPoilicy or legacy REQUESTREVIEW)
-policy_val="${RequestReviewPolicy:-${RequestReviewPoilicy:-${REQUESTREVIEW:-}}}"
-if [ "${policy_val,,}" = "false" ]; then
-    echo "[Init] RequestReviewPolicy=false: Pre-configuring Agent mode to Full Access (Always Proceed)..."
+# 5b. Pre-configure Agent review & auto-execution policy in state.vscdb
+# Granular environment variables:
+#   TERMINAL_AUTO_EXECUTION: eager (default: execute terminal commands autonomously) vs off
+#   ARTIFACT_REVIEW_POLICY:  always (default: ask confirmation for implementation plans) vs turbo
+term_env="${TERMINAL_AUTO_EXECUTION:-eager}"
+art_env="${ARTIFACT_REVIEW_POLICY:-always}"
+
+if [ -n "$term_env" ] || [ -n "$art_env" ]; then
     python3 -c '
-import sqlite3, os
+import sqlite3, os, base64
 
 db_dir = "/home/antigravity/.config/Antigravity IDE/User/globalStorage"
 db_path = os.path.join(db_dir, "state.vscdb")
 os.makedirs(db_dir, exist_ok=True)
 
+term_env = os.environ.get("TERMINAL_AUTO_EXECUTION", "eager")
+art_env = os.environ.get("ARTIFACT_REVIEW_POLICY", "always")
+
+# Terminal Auto-Execution Policy:
+# Default: EAGER (autonomous command execution)
+term_eager = True
+if term_env.lower() in ("false", "0", "off"):
+    term_eager = False
+elif term_env.lower() in ("true", "1", "eager", "auto"):
+    term_eager = True
+
+# Artifact / Implementation Plan Review Policy:
+# Default: ALWAYS (asks confirmation before proceeding with implementation plans)
+art_always = True
+if art_env.lower() in ("turbo", "false", "auto"):
+    art_always = False
+elif art_env.lower() in ("always", "true"):
+    art_always = True
+
+term_val = "EAM=" if term_eager else "EAE="
+art_val = "EAE=" if art_always else "EAI="
+
+part1 = b"\n>\n\x18permission_grants_global\x12\"\n ChZleGVjdXRlX3VybChsb2NhbGhvc3Qp"
+part2 = b"\n0\n&terminalAutoExecutionPolicySentinelKey\x12\x06\n\x04" + term_val.encode()
+part3 = b"\n)\n\x1fartifactReviewPolicySentinelKey\x12\x06\n\x04" + art_val.encode()
+
+agent_prefs_b64 = base64.b64encode(part1 + part2 + part3).decode()
+
 try:
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
     cur.execute("CREATE TABLE IF NOT EXISTS ItemTable (key TEXT PRIMARY KEY, value TEXT)")
-    
-    full_access_val = "Cj4KGHBlcm1pc3Npb25fZ3JhbnRzX2dsb2JhbBIiCiBDaFpsZUdWamRYUmxYM1Z5YkNoc2IyTmhiR2h2YzNRcAowCiZ0ZXJtaW5hbEF1dG9FeGVjdXRpb25Qb2xpY3lTZW50aW5lbEtleRIGCgRFQU09CikKH2FydGlmYWN0UmV2aWV3UG9saWN5U2VudGluZWxLZXkSBgoERUFJPQ=="
-    
-    cur.execute("INSERT OR REPLACE INTO ItemTable (key, value) VALUES (\"antigravityUnifiedStateSync.agentPreferences\", ?)", (full_access_val,))
+    cur.execute("INSERT OR REPLACE INTO ItemTable (key, value) VALUES (\"antigravityUnifiedStateSync.agentPreferences\", ?)", (agent_prefs_b64,))
     conn.commit()
     conn.close()
-    print("[Init] Agent mode set to Full Access in state.vscdb.")
+    term_desc = "Autonomous (EAGER)" if term_eager else "Ask Confirmation (OFF)"
+    art_desc = "Ask Confirmation (ALWAYS)" if art_always else "Auto-Proceed (TURBO)"
+    print(f"[Init] Agent policies configured: Terminal = {term_desc}, Implementation Plans = {art_desc}")
 except Exception as e:
     print(f"[Init] Warning: Could not update state.vscdb: {e}")
 ' 2>/dev/null || true
     chown -R antigravity:antigravity "/home/antigravity/.config/Antigravity IDE" 2>/dev/null || true
-else
-    echo "[Init] RequestReviewPolicy is not set to 'false'. Leaving database and agent review settings untouched."
 fi
 
 # 6. Configure KasmVNC Server

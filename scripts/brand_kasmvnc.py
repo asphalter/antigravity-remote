@@ -164,6 +164,52 @@ splash_html = (
 )
 
 # 3. Patch index.html and vnc.html
+switch_window_html = (
+    '<div id="noVNC_switch_window_button" class="noVNC_button_div" role="button" tabindex="0" '
+    'style="display: flex; align-items: center; padding: 8px 10px; margin: 4px 0 6px 0; '
+    'background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 6px; '
+    'color: #ffffff; text-decoration: none; cursor: pointer; transition: all 0.2s ease; user-select: none;" '
+    'onmouseover="this.style.background=\'rgba(255, 255, 255, 0.18)\'; this.style.borderColor=\'rgba(255, 255, 255, 0.3)\';" '
+    'onmouseout="this.style.background=\'rgba(255, 255, 255, 0.08)\'; this.style.borderColor=\'rgba(255, 255, 255, 0.12)\';" '
+    'onmousedown="this.style.transform=\'scale(0.97)\';" onmouseup="this.style.transform=\'none\';" '
+    'onclick="window.kasmSwitchWindow && window.kasmSwitchWindow();" '
+    'onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();window.kasmSwitchWindow&&window.kasmSwitchWindow();}" '
+    'title="Switch active window (Alt+Tab)">'
+    '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 10px; flex-shrink: 0; color: #38bdf8;"><rect x="2" y="7" width="13" height="13" rx="2"></rect><path d="M5 7V4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"></path></svg>'
+    '<span style="font-size: 13px; font-weight: 500; letter-spacing: 0.3px; flex-grow: 1;">Switch Window</span>'
+    '<span style="font-size: 10px; font-weight: 600; opacity: 0.65; background: rgba(255, 255, 255, 0.12); padding: 2px 6px; border-radius: 4px; font-family: -apple-system, BlinkMacSystemFont, monospace;">Alt+Tab</span>'
+    '</div>'
+)
+
+switch_window_script = (
+    '<script id="noVNC_switch_window_script">\n'
+    'window.kasmSwitchWindow = function() {\n'
+    '    try {\n'
+    '        var u = window.UI;\n'
+    '        if (u && u.rfb && u.rfb._rfbConnectionState === "connected") {\n'
+    '            u.rfb.sendKey(65513, "AltLeft", true);\n'
+    '            setTimeout(function() {\n'
+    '                u.rfb.sendKey(65289, "Tab");\n'
+    '                setTimeout(function() { u.rfb.sendKey(65513, "AltLeft", false); }, 120);\n'
+    '            }, 30);\n'
+    '            return;\n'
+    '        }\n'
+    '        var altBtn = document.getElementById("noVNC_toggle_alt_button");\n'
+    '        var tabBtn = document.getElementById("noVNC_send_tab_button");\n'
+    '        if (altBtn && tabBtn) {\n'
+    '            if (!altBtn.classList.contains("noVNC_selected")) altBtn.click();\n'
+    '            setTimeout(function() {\n'
+    '                tabBtn.click();\n'
+    '                setTimeout(function() {\n'
+    '                    if (altBtn.classList.contains("noVNC_selected")) altBtn.click();\n'
+    '                }, 120);\n'
+    '            }, 30);\n'
+    '        }\n'
+    '    } catch (e) { console.error("Switch window error:", e); }\n'
+    '};\n'
+    '</script>\n'
+)
+
 replacement_logo_html = (
     '<h1 class="noVNC_logo" style="background: rgba(255, 255, 255, 0.08); '
     'border-radius: 8px; padding: 10px 8px; margin: 5px 0 8px 0; display: flex; '
@@ -173,9 +219,10 @@ replacement_logo_html = (
     f'<img src="{svg_data_uri}" style="width: 28px; height: 28px; object-fit: contain; border-radius: 4px;" alt="Antigravity">'
     '<span style="color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif; '
     'font-size: 15px; font-weight: 600; letter-spacing: 0.5px; margin-left: 8px;">Antigravity</span>'
-    '</a></h1>'
+    '</a></h1>\n'
+    f'{switch_window_html}\n'
     '<a href="/filebrowser/" target="_blank" rel="noopener noreferrer" id="noVNC_filebrowser_link" '
-    'class="noVNC_button_div" style="display: flex; align-items: center; padding: 8px 10px; margin: 6px 0 10px 0; '
+    'class="noVNC_button_div" style="display: flex; align-items: center; padding: 8px 10px; margin: 4px 0 10px 0; '
     'background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 6px; '
     'color: #ffffff; text-decoration: none; cursor: pointer; transition: all 0.2s ease;" '
     'onmouseover="this.style.background=\'rgba(255, 255, 255, 0.18)\'; this.style.borderColor=\'rgba(255, 255, 255, 0.3)\';" '
@@ -209,12 +256,20 @@ for filename in ["index.html", "vnc.html"]:
     if "<title>KasmVNC</title>" in html:
         html = html.replace("<title>KasmVNC</title>", title_script)
     elif "<title>Antigravity</title>" in html and "antigravity-splash-style" not in html:
-        # ensure favicons are fresh
         pass
 
-    # 3b. Sidebar logo and FileBrowser link
-    if '<h1 class="noVNC_logo">' in html and 'id="noVNC_filebrowser_link"' not in html:
-        html = re.sub(r'<h1 class="noVNC_logo">.*?</h1>', replacement_logo_html, html, count=1, flags=re.DOTALL)
+    # 3b. Sidebar logo, Switch Window button, and FileBrowser link
+    if 'id="noVNC_switch_window_button"' not in html:
+        if 'id="noVNC_filebrowser_link"' in html:
+            html = re.sub(r'(<a\s+[^>]*id="noVNC_filebrowser_link")', f'{switch_window_html}\n\\1', html)
+        elif '<h1 class="noVNC_logo">' in html:
+            html = re.sub(r'<h1 class="noVNC_logo">.*?</h1>', replacement_logo_html, html, count=1, flags=re.DOTALL)
+
+    # 3b-2. Switch window script
+    if 'noVNC_switch_window_script' in html:
+        html = re.sub(r'<script\s+id="noVNC_switch_window_script">.*?</script>\n?', switch_window_script, html, flags=re.DOTALL)
+    elif '</body>' in html:
+        html = html.replace('</body>', f'{switch_window_script}\n</body>')
 
     # 3c. Splash styles injection in <head>
     if "antigravity-splash-style" not in html and "</head>" in html:
@@ -250,7 +305,7 @@ for css_file in glob.glob(os.path.join(assets_dir, "ui-*.css")):
             f.write(css_patched)
         print(f"[Brand] Successfully stripped KasmVNC SVG background from {os.path.basename(css_file)}")
 
-# 5. Patch assets/ui-*.js (title strings)
+# 5. Patch assets/ui-*.js (title strings & expose window.UI)
 for js_file in glob.glob(os.path.join(assets_dir, "ui-*.js")):
     with open(js_file, "r", encoding="utf-8") as f:
         js = f.read()
@@ -264,6 +319,11 @@ for js_file in glob.glob(os.path.join(assets_dir, "ui-*.js")):
         modified = True
     if 'document.title=Sx' in js:
         js = js.replace('document.title=Sx', 'document.title="Antigravity"')
+        modified = True
+
+    if "window.UI=o" not in js:
+        js = js.replace("o.prime()", "(window.UI=o,o.prime())")
+        js = js.replace(".then(o.prime)", ".then(()=>(window.UI=o,o.prime()))")
         modified = True
 
     if modified:

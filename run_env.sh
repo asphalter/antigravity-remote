@@ -27,7 +27,8 @@ CONTAINER_NAME="${ANTIGRAVITY_CONTAINER:-antigravity-remote}"
 VOLUME_NAME="${ANTIGRAVITY_VOLUME:-antigravity-home}"
 HOST_PORT="${ANTIGRAVITY_PORT:-8080}"
 FILEBROWSER_PORT="${ANTIGRAVITY_FB_PORT:-8081}"
-RequestReviewPolicy="${RequestReviewPolicy:-${RequestReviewPoilicy:-${REQUESTREVIEW:-false}}}"
+TERMINAL_AUTO_EXECUTION="${TERMINAL_AUTO_EXECUTION:-eager}"
+ARTIFACT_REVIEW_POLICY="${ARTIFACT_REVIEW_POLICY:-always}"
 
 # Output styling colors
 RED='\033[0;31m'
@@ -46,12 +47,13 @@ echo -e "${CYAN}═════════════════════�
 echo -e "${CYAN}  Antigravity Remote — Web-Native Desktop Environment${NC}"
 echo -e "${CYAN}══════════════════════════════════════════════════════════════${NC}"
 echo ""
-echo -e "  IDE Port:          ${BOLD}${HOST_PORT}${NC}"
-echo -e "  FileBrowser Port:  ${BOLD}${FILEBROWSER_PORT}${NC}"
-echo -e "  Image:             ${BOLD}${IMAGE_NAME}${NC}"
-echo -e "  Container:         ${BOLD}${CONTAINER_NAME}${NC}"
-echo -e "  Home Volume:       ${BOLD}${VOLUME_NAME}${NC}"
-echo -e "  Review Policy:     ${BOLD}${RequestReviewPolicy}${NC}"
+echo -e "  IDE Port:            ${BOLD}${HOST_PORT}${NC}"
+echo -e "  FileBrowser Port:    ${BOLD}${FILEBROWSER_PORT}${NC}"
+echo -e "  Image:               ${BOLD}${IMAGE_NAME}${NC}"
+echo -e "  Container:           ${BOLD}${CONTAINER_NAME}${NC}"
+echo -e "  Home Volume:         ${BOLD}${VOLUME_NAME}${NC}"
+echo -e "  Terminal Execution:  ${BOLD}${TERMINAL_AUTO_EXECUTION}${NC} (autonomous command execution)"
+echo -e "  Plan Review Policy:  ${BOLD}${ARTIFACT_REVIEW_POLICY}${NC} (ask confirmation before execution)"
 echo ""
 
 # --------------------------------------------------------------------------
@@ -100,7 +102,8 @@ podman run -d \
     --security-opt label=disable \
     --shm-size=2g \
     --memory=16g --cpus=8 \
-    -e RequestReviewPolicy="${RequestReviewPolicy}" \
+    -e TERMINAL_AUTO_EXECUTION="${TERMINAL_AUTO_EXECUTION}" \
+    -e ARTIFACT_REVIEW_POLICY="${ARTIFACT_REVIEW_POLICY}" \
     -v "${VOLUME_NAME}:/home/antigravity" \
     -p "${HOST_PORT}:8080" \
     -p "${FILEBROWSER_PORT}:8081" \

@@ -21,8 +21,16 @@ SecurityLabelDisable=true
 ShmSize=2g
 PodmanArgs=--memory=16g --cpus=8
 
-# --- Environment variables ---
-Environment=RequestReviewPolicy=false
+# --- Environment variables (Agent Execution & Review Policies) ---
+# TERMINAL_AUTO_EXECUTION:
+#   - eager (default): Execute shell commands autonomously without confirmation prompts
+#   - off: Require manual confirmation for every terminal command
+Environment=TERMINAL_AUTO_EXECUTION=eager
+
+# ARTIFACT_REVIEW_POLICY:
+#   - always (default): Require explicit user approval before executing Implementation Plans
+#   - turbo: Automatically approve and proceed with Implementation Plans unattended
+Environment=ARTIFACT_REVIEW_POLICY=always
 
 # --- Persistent volume for /home/antigravity ---
 Volume=antigravity-home.volume:/home/antigravity

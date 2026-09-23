@@ -97,7 +97,9 @@ FileBrowser Quantum (`gtsteffaniak/filebrowser`) runs on port 8081 with root `/h
 - **Upload**: Drag-and-drop or browse files and folders from your local device directly into `/home/antigravity`.
 - **Download**: Browse container files, download single files or select multiple files/directories to download as a zipped archive (`.zip`).
 - **Path-Based Routing**: Configured with `baseURL: "/filebrowser"`, allowing Cloudflare Tunnel to expose FileBrowser at `https://<domain>/filebrowser` seamlessly.
-- **Integrated Sidebar Shortcut**: A dedicated "FileBrowser" button is built directly into the KasmVNC left sliding menu, allowing instant access to `/filebrowser` in a new browser tab with one click.
+- **Integrated Sidebar Shortcuts**:
+  - **Switch Window (`Alt+Tab`)**: A dedicated quick button positioned directly under the Antigravity logo in the KasmVNC sliding sidebar. It allows switching between active windows (e.g. bringing Chromium to the foreground when opened by the IDE for preview or OAuth) without needing to minimize Antigravity.
+  - **FileBrowser**: A dedicated quick-launch button to open the Web File Manager in a new browser tab with one click.
 - **Frictionless Auth (`noauth`)**: Internal authentication, 2FA/TOTP, and LDAP are disabled via `config/filebrowser.yaml` to allow instant perimeter-secured access without duplicate login prompts.
 
 ### Network Security
@@ -139,7 +141,8 @@ podman run -d \
   --security-opt label=disable \
   --shm-size=2g \
   --memory=16g --cpus=8 \
-  -e RequestReviewPolicy=false \
+  -e TERMINAL_AUTO_EXECUTION=eager \
+  -e ARTIFACT_REVIEW_POLICY=always \
   -v antigravity-home:/home/antigravity \
   -p 8080:8080 \
   -p 8081:8081 \
@@ -166,7 +169,8 @@ docker run -d \
   --security-opt apparmor=unconfined \
   --shm-size=2g \
   --memory=16g --cpus=8 \
-  -e RequestReviewPolicy=false \
+  -e TERMINAL_AUTO_EXECUTION=eager \
+  -e ARTIFACT_REVIEW_POLICY=always \
   -v antigravity-home:/home/antigravity \
   -p 8080:8080 \
   -p 8081:8081 \
@@ -183,7 +187,8 @@ docker run -d \
 | `--cap-add=MKNOD` | **Linux Capability** | **Device Node Creation**. Required by nested container runtimes to create essential pseudo-devices inside nested containers (such as `/dev/null`, `/dev/zero`, `/dev/random`, and `/dev/ptmx`). |
 | `--security-opt label=disable` | **Security (Podman)** | **SELinux Confinement Bypass**. On systems enforcing SELinux (RHEL, Fedora, Rocky, CentOS), disabling container label separation (`container_t`) prevents SELinux permission denials when nested containers allocate `fuse-overlayfs` storage mounts. |
 | `--security-opt seccomp=unconfined` | **Security (Docker)** | **Nested Syscall Permissions**. Docker's default Seccomp profile blocks `unshare` and `clone3` with specific namespace flags required by nested container engines. Disabling Seccomp filtering is needed if running nested Podman inside Docker. |
-| `-e RequestReviewPolicy=false` | **Agent Permission Mode** | *(Optional)* When set to `false`, pre-configures the Antigravity agent in `state.vscdb` to **Full Access** (`EAGER` terminal execution & `TURBO` review policy), enabling autonomous workflows without interactive confirmation prompts. If omitted or set to any other value, the database is left completely untouched. |
+| `-e TERMINAL_AUTO_EXECUTION=eager` | **Terminal Permission Mode** | *(Optional, default: `eager`)* Pre-configures the Antigravity agent in `state.vscdb` to execute terminal commands autonomously (`EAGER`), avoiding manual confirmation prompts for shell commands. Set to `off` if manual confirmation is desired. |
+| `-e ARTIFACT_REVIEW_POLICY=always` | **Plan Review Permission Mode** | *(Optional, default: `always`)* Pre-configures the agent in `state.vscdb` to **require explicit user confirmation before executing Implementation Plans** or applying critical artifacts (`ALWAYS`). Set to `turbo` if automatic unattended plan execution is desired. |
 | `-v antigravity-home:/home/antigravity` | **Storage Volume** | **100% Data Persistence**. Guarantees that workspaces, installed extensions (`~/.antigravity-ide`), configurations (`~/.config/Antigravity IDE`), and agent transcripts/conversations (`~/.gemini`) survive container recreations and image rebuilds. |
 | `-p 8080:8080 -p 8081:8081` | **Port Publishing** | Publishes port `8080` (KasmVNC HTML5 Desktop) and `8081` (FileBrowser Quantum Web Manager). |
 | `--memory=16g --cpus=8` | **Resource Quota** | Recommended allocation for Google Antigravity's multi-threaded indexing, Language Server Protocols (LSP), and autonomous agent workflows. |
